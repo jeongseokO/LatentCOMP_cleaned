@@ -42,6 +42,9 @@ def parse_args():
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--prefill_layers", type=int, default=0, help="Used for lopa/combined (LOPA)")
     p.add_argument("--special_tokens", type=int, default=10, help="How many Latent specials to add (lcomp/combined)")
+    # phased LatentCOMP toggles
+    p.add_argument("--include_query", type=str, default="True", help="lcomp: include query around specials")
+    p.add_argument("--include_specials", type=str, default="True", help="lcomp: include latent specials")
     p.add_argument("--use_lora", action="store_true")
     # LOPA experiment: cut gen at prefill_layers as well
     p.add_argument("--also_cut_gen", action="store_true", help="If set (LOPA only), run gen with layers_limit=prefill_layers")
@@ -90,6 +93,7 @@ def main():
     # Map unified args to existing cleaned trainers
     # For gen1/gen2 we use train_latentcomp.py; for gen3 train_lopa.py
     trainer = here / "train_latentcomp.py"
+    trainer_phased = here / "train_latentcomp_phased.py"
     trainer_gen3 = here / "train_lopa_pure.py"
 
     if method == "lopa":
@@ -112,26 +116,44 @@ def main():
     else:
         # lcomp or combined → special tokens + optional partial prefill
         pl = 0 if method == "lcomp" else max(1, int(args.prefill_layers))
-        cmd = [
-            "python", str(trainer),
-            "--model_name", args.model_name,
-            "--data_file", args.data_file,
-            "--epochs", str(args.epochs),
-            "--batch_size", str(args.batch_size),
-            "--lr", str(args.lr),
-            "--seed", str(args.seed),
-            "--prefill_layers", str(pl),
-            "--latent_token_num", str(int(args.special_tokens)),
-            "--wandb_project", args.wandb_project,
-            "--save_best_dir", str(best_dir),
-            "--support", "False",
-            "--dynamic_support", "False",
-        ]
+        # Use the new, clean phased trainer for lcomp; keep legacy for combined
+        if method == "lcomp":
+            cmd = [
+                "python", str(trainer_phased),
+                "--model_name", args.model_name,
+                "--data_file", args.data_file,
+                "--epochs", str(args.epochs),
+                "--batch_size", str(args.batch_size),
+                "--lr", str(args.lr),
+                "--seed", str(args.seed),
+                "--latent_token_num", str(int(args.special_tokens)),
+                "--wandb_project", args.wandb_project,
+                "--save_best_dir", str(best_dir),
+                "--include_query", str(args.include_query),
+                "--include_specials", str(args.include_specials),
+            ]
+        else:
+            cmd = [
+                "python", str(trainer),
+                "--model_name", args.model_name,
+                "--data_file", args.data_file,
+                "--epochs", str(args.epochs),
+                "--batch_size", str(args.batch_size),
+                "--lr", str(args.lr),
+                "--seed", str(args.seed),
+                "--prefill_layers", str(pl),
+                "--latent_token_num", str(int(args.special_tokens)),
+                "--wandb_project", args.wandb_project,
+                "--save_best_dir", str(best_dir),
+                "--support", "False",
+                "--dynamic_support", "False",
+            ]
         if args.cache_dir_model: cmd += ["--cache_dir_model", args.cache_dir_model]
         if args.cache_dir_tokenizer: cmd += ["--cache_dir_tokenizer", args.cache_dir_tokenizer]
         if args.use_lora: cmd += ["--use_lora", "True"]
         # We will handle Hub push after repack; don't push inside inner trainer
-        cmd += ["--pos_mode", "original"]
+        if method == "combined":
+            cmd += ["--pos_mode", "original"]
 
     print("[Unified] launching:", " ".join(cmd))
     # Run trainer (subprocess). If running under a job system, this can be delegated.
