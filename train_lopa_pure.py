@@ -418,23 +418,6 @@ def train(args):
                 v_empty = v_sys[:, :, :0, :].contiguous()
                 combined.update(k_empty, v_empty, li)
 
-        # Phase-2: push assistant header (no labels)
-        hdr_tail = ids_hdr[:, L_all:]
-        if hdr_tail.numel() > 0:
-            attn_hdr = torch.cat([
-                torch.ones(1, pkv_get(combined, 0)[0].shape[2], device=device, dtype=torch.long),
-                torch.ones(1, hdr_tail.size(1), device=device, dtype=torch.long)
-            ], dim=1)
-            with torch.no_grad():
-                out_hdr = model(
-                    input_ids=hdr_tail,
-                    past_key_values=combined,
-                    attention_mask=attn_hdr,
-                    use_cache=True,
-                    return_dict=True,
-                )
-            combined = out_hdr.past_key_values
-
         # Build assistant continuation ids from response
         msgs_ass = msgs + [{"role": "assistant", "content": resp}]
         full_ids = tokens_from_messages(tokenizer, msgs_ass, device, add_generation_prompt=False)
@@ -443,28 +426,33 @@ def train(args):
         if assistant_ids.numel() == 0:
             return torch.zeros((), device=device, dtype=torch.float32)
 
+        # Do NOT push header into past during training.
+        # Instead, include header as the first token(s) of the input and mask it out in labels
+        # so that the first predicted target is the first assistant token (A0).
+        hdr_tail = ids_hdr[:, L_all:]  # header-only sequence (could be multi-token)
+        inp = torch.cat([hdr_tail, assistant_ids], dim=1)  # [H, A0, A1, ...]
+        lab = inp.clone()  # 헤더도 라벨에 포함 → <header_start>가 'assistant'를 예측하도록 감독
+
         attn_mask = torch.cat([
             torch.ones(1, pkv_get(combined, 0)[0].shape[2], device=device, dtype=torch.long),
-            torch.ones(1, assistant_ids.size(1), device=device, dtype=torch.long)
+            torch.ones(1, inp.size(1), device=device, dtype=torch.long)
         ], dim=1)
 
-        def _forward_and_loss_float32():
+        # Use HF standard CLM loss (handles 1-token shift internally). Header is ignored via -100.
+        def _forward_hf_loss():
             out_local = model(
-                input_ids=assistant_ids,
+                input_ids=inp,
                 past_key_values=combined,
                 attention_mask=attn_mask,
+                labels=lab,
                 use_cache=True,
                 return_dict=True,
             )
-            logits = out_local.logits.to(torch.float32)
-            return F.cross_entropy(
-                logits.view(-1, logits.size(-1)),
-                assistant_ids.view(-1),
-                reduction="mean",
-            )
+            return out_local.loss if out_local.loss is not None else None
 
-        loss_val = _forward_and_loss_float32()
-        if not torch.isfinite(loss_val):
+        loss_val = _forward_hf_loss()
+        if (loss_val is None) or (not torch.isfinite(loss_val)):
+            # Fallback: force math SDPA for this batch
             flash0 = mem0 = math0 = None
             if torch.cuda.is_available():
                 try:
@@ -476,7 +464,7 @@ def train(args):
                     torch.backends.cuda.enable_math_sdp(True)
                 except Exception:
                     pass
-            loss_val = _forward_and_loss_float32()
+            loss_val = _forward_hf_loss()
             if torch.cuda.is_available() and None not in (flash0, mem0, math0):
                 try:
                     torch.backends.cuda.enable_flash_sdp(bool(flash0))
