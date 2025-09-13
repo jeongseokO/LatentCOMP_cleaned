@@ -215,22 +215,15 @@ def main():
             model = base.to(device).eval()
     else:
         model = base.to(device).eval()
-    # Force eager attention for Mistral (stability), else keep SDPA
-    try:
-        is_mistral = ("mistral" in args.model_name.lower()) or (
-            str(getattr(model.config, "model_type", "")).lower().startswith("mistral")
-        )
-    except Exception:
-        is_mistral = ("mistral" in args.model_name.lower())
-    impl = "eager" if is_mistral else "sdpa"
+    # Force eager attention for all models (stability)
+    impl = "eager"
     for k in ("attn_implementation", "_attn_implementation"):
         try:
             setattr(model.config, k, impl)
             setattr(model.model.config, k, impl)
         except Exception:
             pass
-    if is_mistral:
-        print("[infer] Detected Mistral; forcing attn_implementation='eager'.")
+    print("[infer] Forcing attn_implementation='eager' for all models (stability mode).")
 
     text = lopa_generate(
         model, tokenizer,
