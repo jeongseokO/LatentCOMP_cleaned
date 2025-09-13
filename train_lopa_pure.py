@@ -34,6 +34,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import get_cosine_schedule_with_warmup
 from tqdm import tqdm
 from accelerate import Accelerator
+try:
+    from accelerate import FullyShardedDataParallelPlugin, DeepSpeedPlugin
+except Exception:
+    FullyShardedDataParallelPlugin = None
+    DeepSpeedPlugin = None
 from huggingface_hub import create_repo, upload_folder
 from transformers.cache_utils import DynamicCache
 
@@ -85,6 +90,9 @@ def build_argparser():
     p.add_argument("--hf_repo_id", type=str, default=None, help="repo id to upload best/ (e.g., user/repo)")
     p.add_argument("--push_to_hub", action="store_true")
     p.add_argument("--private_repo", action="store_true")
+    # distributed / sharding
+    p.add_argument("--dist_mode", type=str, choices=["ddp", "fsdp", "deepspeed"], default="ddp")
+    p.add_argument("--zero_stage", type=int, default=2, help="DeepSpeed ZeRO stage (if dist_mode=deepspeed)")
     return p
 
 
@@ -200,8 +208,42 @@ def _get_inner_model(m):
     raise AttributeError("Could not locate inner base model with a .layers attribute")
 
 
+def _build_accelerator(args) -> Accelerator:
+    # derive mixed precision from dtype option
+    if args.dtype == "bf16":
+        mp = "bf16"
+    elif args.dtype == "fp16":
+        mp = "fp16"
+    else:
+        mp = "no"
+
+    # Optional FSDP auto-wrap policy for transformer decoders
+    auto_wrap = None
+    try:
+        from transformers.models.llama.modeling_llama import LlamaDecoderLayer
+        from transformers.models.mistral.modeling_mistral import MistralDecoderLayer
+        auto_wrap = {"transformer_layer_cls_to_wrap": (LlamaDecoderLayer, MistralDecoderLayer)}
+    except Exception:
+        pass
+
+    mode = getattr(args, "dist_mode", "ddp")
+    if mode == "fsdp" and FullyShardedDataParallelPlugin is not None:
+        fsdp = FullyShardedDataParallelPlugin(
+            sharding_strategy="FULL_SHARD",
+            cpu_offload=False,
+            limit_all_gathers=True,
+            use_orig_params=True,
+            auto_wrap_policy=auto_wrap,
+        )
+        return Accelerator(mixed_precision=mp, fsdp_plugin=fsdp)
+    if mode == "deepspeed" and DeepSpeedPlugin is not None:
+        ds = DeepSpeedPlugin(zero_stage=int(getattr(args, "zero_stage", 2)))
+        return Accelerator(mixed_precision=mp, deepspeed_plugin=ds)
+    return Accelerator(mixed_precision=mp)
+
+
 def train(args):
-    accelerator = Accelerator()
+    accelerator = _build_accelerator(args)
     set_seed(args.seed)
     device = accelerator.device
 
