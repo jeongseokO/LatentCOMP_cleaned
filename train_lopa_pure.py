@@ -84,7 +84,7 @@ def build_argparser():
 
 
 class QADataset(Dataset):
-    def __init__(self, path: str, tokenizer, max_doc_tokens: int = 20000):
+    def __init__(self, path: str, tokenizer, max_doc_tokens: int = 2048):
         self.recs = []
         with open(path, encoding="utf-8") as f:
             for line in f:
@@ -220,7 +220,7 @@ def train(args):
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name,
         trust_remote_code=False,
-        torch_dtype=dtype,
+        torch_dtype=torch.bfloat16,
         cache_dir=args.cache_dir_model,
     )
     # attn backend
@@ -285,6 +285,36 @@ def train(args):
 
     # Prepare with accelerate
     model, optim, dl_train, dl_val = accelerator.prepare(model, optim, dl_train, dl_val)
+    # --- Diagnostics: print compute dtype / backend flags (main process only)
+    if accelerator.is_main_process:
+        try:
+            dev_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else str(device)
+        except Exception:
+            dev_name = str(device)
+        try:
+            param_dtype = next(model.parameters()).dtype
+        except Exception:
+            param_dtype = None
+        try:
+            bf16_ok = torch.cuda.is_bf16_supported() if torch.cuda.is_available() else False
+        except Exception:
+            bf16_ok = False
+        try:
+            tf32_matmul = torch.backends.cuda.matmul.allow_tf32 if torch.cuda.is_available() else False
+            tf32_cudnn  = torch.backends.cudnn.allow_tf32 if torch.cuda.is_available() else False
+        except Exception:
+            tf32_matmul, tf32_cudnn = None, None
+        try:
+            flash = torch.backends.cuda.flash_sdp_enabled() if torch.cuda.is_available() else None
+            mem_e = torch.backends.cuda.mem_efficient_sdp_enabled() if torch.cuda.is_available() else None
+            math  = torch.backends.cuda.math_sdp_enabled() if torch.cuda.is_available() else None
+        except Exception:
+            flash = mem_e = math = None
+        print("[Env] torch:", torch.__version__, "cuda:", torch.version.cuda)
+        print("[Env] device:", dev_name)
+        print("[Env] requested dtype:", dtype, "| actual param dtype:", param_dtype, "| bf16_support:", bf16_ok)
+        print("[Env] TF32 matmul:", tf32_matmul, "cudnn:", tf32_cudnn)
+        print("[Env] SDPA flags → flash:", flash, "mem_efficient:", mem_e, "math:", math)
     # Scheduler: cosine with warmup
     total_train_steps = args.epochs * max(1, len(dl_train))
     warmup_steps = args.warmup_steps if int(args.warmup_steps) > 0 else int(args.warmup_ratio * total_train_steps)
@@ -432,6 +462,7 @@ def train(args):
     for epoch in range(1, args.epochs + 1):
         model.train()
         tr_loss_sum, tr_count = 0.0, 0
+        train_nan_skipped = 0
         train_iter = dl_train
         if accelerator.is_main_process:
             train_iter = tqdm(dl_train, desc=f"Epoch {epoch} [train]", leave=False)
@@ -441,30 +472,42 @@ def train(args):
                 continue
             loss_accum = 0.0
             loss_vals = []
+            valid_in_step = 0
             for q, d, r in items:
                 loss_i = compute_loss_on_sample(q, d, r)
+                # Skip NaN/Inf losses
+                if not torch.isfinite(loss_i):
+                    train_nan_skipped += 1
+                    continue
                 loss_accum += float(loss_i.detach().item())
                 loss_vals.append(float(loss_i.detach().item()))
                 accelerator.backward(loss_i / max(1, args.batch_size))
-            # grad clip + step
-            if float(args.grad_clip) and args.grad_clip > 0:
-                try:
-                    accelerator.clip_grad_norm_(model.parameters(), args.grad_clip)
-                except Exception:
-                    pass
-            optim.step(); scheduler.step(); optim.zero_grad(set_to_none=True)
-            tr_loss_sum += loss_accum
-            tr_count += len(items)
+                valid_in_step += 1
+            if valid_in_step > 0:
+                # grad clip + step
+                if float(args.grad_clip) and args.grad_clip > 0:
+                    try:
+                        accelerator.clip_grad_norm_(model.parameters(), args.grad_clip)
+                    except Exception:
+                        pass
+                optim.step(); scheduler.step()
+                tr_loss_sum += loss_accum
+                tr_count += valid_in_step
+            # Always zero grads at step end
+            optim.zero_grad(set_to_none=True)
             # step-level logging (per optimizer step)
             if accelerator.is_main_process and run is not None:
                 try:
-                    step_loss = (sum(loss_vals) / max(1, len(loss_vals)))
+                    step_loss = (sum(loss_vals) / max(1, len(loss_vals))) if loss_vals else None
                     # fetch current lr
                     try:
                         lr = float(scheduler.get_last_lr()[0])
                     except Exception:
                         lr = optim.param_groups[0]["lr"]
-                    run.log({"step": global_step, "train/step_loss": step_loss, "lr": lr})
+                    payload = {"step": global_step, "lr": lr, "train/nan_skipped_step": (len(items) - valid_in_step)}
+                    if step_loss is not None:
+                        payload["train/step_loss"] = step_loss
+                    run.log(payload)
                 except Exception:
                     pass
             global_step += 1
@@ -473,6 +516,7 @@ def train(args):
         # validation
         model.eval()
         va_loss_sum, va_count = 0.0, 0
+        val_nan_skipped = 0
         with torch.no_grad():
             for batch in dl_val:
                 items = _iter_items(batch)
@@ -480,15 +524,24 @@ def train(args):
                     continue
                 for q, d, r in items:
                     loss_i = compute_loss_on_sample(q, d, r)
+                    if not torch.isfinite(loss_i):
+                        val_nan_skipped += 1
+                        continue
                     va_loss_sum += float(loss_i.detach().item())
                     va_count += 1
         va_avg = va_loss_sum / max(1, va_count)
 
         if accelerator.is_main_process:
-            print(f"[Epoch {epoch}] train_avg={tr_avg:.6f} | valid_avg={va_avg:.6f}")
+            print(f"[Epoch {epoch}] train_avg={tr_avg:.6f} | valid_avg={va_avg:.6f} | skipped(nan): train={train_nan_skipped}, valid={val_nan_skipped}")
             if run is not None:
                 try:
-                    run.log({"epoch": epoch, "train/avg": tr_avg, "valid/avg": va_avg})
+                    run.log({
+                        "epoch": epoch,
+                        "train/avg": tr_avg,
+                        "valid/avg": va_avg,
+                        "train/nan_skipped": train_nan_skipped,
+                        "valid/nan_skipped": val_nan_skipped,
+                    })
                 except Exception:
                     pass
 
