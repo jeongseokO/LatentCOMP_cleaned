@@ -61,7 +61,8 @@ def dc_from_subset(pkv_src, idxs: List[int]) -> DynamicCache:
 @torch.inference_mode()
 def lopa_generate(model, tokenizer, system: str, document: str, question: str, *, K: int, device: str,
                   max_new_tokens: int = 256, min_length: int = 16, temperature: float = 0.7,
-                  top_p: float = 0.9, do_sample: bool = True) -> str:
+                  top_p: float = 0.9, top_k: int | None = None, do_sample: bool = True,
+                  debug: bool = False) -> str:
     # Phase-1 ids
     msgs = build_messages(system, document, question, include_query=True)
     ids_phase1 = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=False)
@@ -99,6 +100,11 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
             v_cat = v_sys[:, :, :0, :]
         combined.update(k_cat.contiguous(), v_cat.contiguous(), li)
 
+    if debug:
+        lower_l = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(0, K_eff)}) if K_eff>0 else []
+        upper_l = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(K_eff, n_layers)}) if K_eff<n_layers else []
+        print(f"[debug] L_sys={L_sys}, L_doc={L_doc}, K={K_eff} | lower_lens={lower_l} | upper_lens={upper_l}")
+
     # 4) header push step-by-step
     hdr_tail = ids_hdr[:, L_all:]
     if hdr_tail.numel() > 0:
@@ -113,13 +119,14 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
 
     # 5) decoding
     from transformers.generation import LogitsProcessorList
-    from transformers.generation.logits_process import TemperatureLogitsWarper, TopPLogitsWarper
+    from transformers.generation.logits_process import TemperatureLogitsWarper, TopPLogitsWarper, TopKLogitsWarper
     eos_id = tokenizer.eos_token_id
     last = ids_hdr[:, -1:]
     generated = torch.empty((1,0), dtype=torch.long, device=device)
     procs = LogitsProcessorList()
     if temperature and temperature != 1.0: procs.append(TemperatureLogitsWarper(temperature=float(temperature)))
     if top_p and top_p < 1.0: procs.append(TopPLogitsWarper(top_p=float(top_p), min_tokens_to_keep=1))
+    if top_k is not None and top_k > 0: procs.append(TopKLogitsWarper(top_k=int(top_k), filter_value=-float("inf")))
     cur = 0
     while cur < max_new_tokens:
         past_len = pkv_get(combined, 0)[0].shape[2]
@@ -155,10 +162,39 @@ def main():
     ap.add_argument("--min_length", type=int, default=16)
     ap.add_argument("--temperature", type=float, default=0.7)
     ap.add_argument("--top_p", type=float, default=0.9)
+    ap.add_argument("--top_k", type=int, default=None)
+    ap.add_argument("--do_sample", action="store_true")
+    # numeric controls for reproducibility
+    ap.add_argument("--dtype", type=str, choices=["auto","bf16","fp16","fp32"], default="auto")
+    ap.add_argument("--no_tf32", action="store_true")
+    ap.add_argument("--sdpa_math_only", action="store_true")
+    ap.add_argument("--debug", action="store_true")
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dtype = torch.bfloat16 if (device=="cuda" and torch.cuda.is_bf16_supported()) else (torch.float16 if device=="cuda" else torch.float32)
+    if args.dtype == "fp32":
+        dtype = torch.float32
+    elif args.dtype == "bf16":
+        dtype = torch.bfloat16
+    elif args.dtype == "fp16":
+        dtype = torch.float16
+    else:
+        dtype = torch.bfloat16 if (device=="cuda" and torch.cuda.is_bf16_supported()) else (torch.float16 if device=="cuda" else torch.float32)
+
+    # global numeric toggles
+    if args.no_tf32 and torch.cuda.is_available():
+        try:
+            torch.backends.cuda.matmul.allow_tf32 = False
+            torch.backends.cudnn.allow_tf32 = False
+        except Exception:
+            pass
+    if args.sdpa_math_only and torch.cuda.is_available():
+        try:
+            torch.backends.cuda.enable_flash_sdp(False)
+            torch.backends.cuda.enable_mem_efficient_sdp(False)
+            torch.backends.cuda.enable_math_sdp(True)
+        except Exception:
+            pass
 
     best_dir = Path(args.best_dir)
     tok_src = str(best_dir) if (best_dir / "tokenizer.json").is_file() else args.model_name
@@ -168,9 +204,17 @@ def main():
     tokenizer.padding_side = "right"
 
     base = AutoModelForCausalLM.from_pretrained(args.model_name, trust_remote_code=False, torch_dtype=dtype)
-    from peft import PeftModel
-    peft = PeftModel.from_pretrained(base, str(best_dir / "lora"))
-    model = peft.merge_and_unload().to(device).eval()
+    # attach LoRA if exists
+    lora_path = best_dir / "lora"
+    if lora_path.exists() and any(lora_path.iterdir()):
+        try:
+            from peft import PeftModel
+            peft = PeftModel.from_pretrained(base, str(lora_path))
+            model = peft.merge_and_unload().to(device).eval()
+        except Exception:
+            model = base.to(device).eval()
+    else:
+        model = base.to(device).eval()
     for k in ("attn_implementation", "_attn_implementation"):
         try:
             setattr(model.config, k, "sdpa"); setattr(model.model.config, k, "sdpa")
@@ -182,11 +226,11 @@ def main():
         system=args.system, document=args.document, question=args.question,
         K=int(args.prefill_layers), device=device,
         max_new_tokens=args.max_new_tokens, min_length=args.min_length,
-        temperature=args.temperature, top_p=args.top_p, do_sample=True,
+        temperature=args.temperature, top_p=args.top_p, top_k=args.top_k,
+        do_sample=bool(args.do_sample), debug=bool(args.debug),
     )
     print(text)
 
 
 if __name__ == "__main__":
     main()
-
