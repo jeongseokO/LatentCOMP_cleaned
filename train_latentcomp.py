@@ -1233,24 +1233,80 @@ def main():
             base_dir.mkdir(parents=True, exist_ok=True)
 
             # 1) Save vanilla base weights under base/
+            # LoRA 사용 시 base 모델 구조에 LoRA 래퍼가 남아 있을 수 있으므로,
+            # 깨끗한 베이스를 로드한 뒤(원본 backbone), 학습된 special-token 임베딩만 복사하여 저장합니다.
             try:
-                base_to_save = unwrapped.get_base_model() if hasattr(unwrapped, "get_base_model") else unwrapped
+                from transformers import AutoModelForCausalLM
             except Exception:
-                base_to_save = unwrapped
+                AutoModelForCausalLM = None
+
+            base_saved = False
             try:
-                # Ensure no remote-code mapping leaks into base config
-                try:
-                    setattr(base_to_save.config, "auto_map", None)
-                except Exception:
-                    pass
-                # Save only the non-LoRA base parameters under base/
-                # This contains the original model with only special-token embeddings updated.
-                base_to_save.save_pretrained(base_dir, safe_serialization=True)
-                print(f"[Best] Saved base weights to {base_dir}")
+                if lora_enabled and AutoModelForCausalLM is not None:
+                    print("[Best] LoRA enabled → loading clean base and transplanting special-token embeddings …")
+                    load_kwargs = {}
+                    if args.cache_dir_model:
+                        load_kwargs["cache_dir"] = args.cache_dir_model
+                    load_kwargs["trust_remote_code"] = True
+                    clean_base = AutoModelForCausalLM.from_pretrained(args.model_name, **load_kwargs)
+                    # Ensure vocab matches tokenizer (to host added Latent specials)
+                    try:
+                        clean_base.resize_token_embeddings(len(tokenizer))
+                    except Exception:
+                        pass
+                    # Copy only the rows for the additional_special_tokens from the trained model
+                    try:
+                        trained_base = unwrapped.get_base_model() if hasattr(unwrapped, "get_base_model") else unwrapped
+                    except Exception:
+                        trained_base = unwrapped
+                    emb_src = trained_base.get_input_embeddings().weight.data
+                    emb_dst = clean_base.get_input_embeddings().weight.data
+                    # Build special id set from tokenizer
+                    special_tokens_vocab = getattr(tokenizer, "additional_special_tokens", []) or []
+                    special_id_set = set(tokenizer.convert_tokens_to_ids(t) for t in special_tokens_vocab)
+                    H_src, H_dst = emb_src.shape[0], emb_dst.shape[0]
+                    copied = 0
+                    for sid in special_id_set:
+                        if sid is None or sid < 0: continue
+                        if sid < H_src and sid < H_dst:
+                            emb_dst[sid].copy_(emb_src[sid])
+                            copied += 1
+                    print(f"[Best] Transplanted {copied} special-token embedding rows")
+                    # Avoid leaking remote-code auto_map into base config
+                    try:
+                        setattr(clean_base.config, "auto_map", None)
+                    except Exception:
+                        pass
+                    clean_base.save_pretrained(base_dir, safe_serialization=True)
+                    try:
+                        del clean_base
+                    except Exception:
+                        pass
+                    base_saved = True
+                else:
+                    # No LoRA or AutoModel unavailable → save current base as-is (already includes resized embeddings)
+                    base_to_save = unwrapped.get_base_model() if hasattr(unwrapped, "get_base_model") else unwrapped
+                    try:
+                        setattr(base_to_save.config, "auto_map", None)
+                    except Exception:
+                        pass
+                    base_to_save.save_pretrained(base_dir, safe_serialization=True)
+                    base_saved = True
             except Exception as e:
-                # Do not save model parameters at the repo root by design.
-                # Explicitly fail to avoid leaking weights into root.
-                raise RuntimeError(f"Failed to save base under base/: {e}")
+                print(f"[Warn] Clean base save/transplant failed ({e}); falling back to current model base")
+                try:
+                    base_to_save = unwrapped.get_base_model() if hasattr(unwrapped, "get_base_model") else unwrapped
+                    try:
+                        setattr(base_to_save.config, "auto_map", None)
+                    except Exception:
+                        pass
+                    base_to_save.save_pretrained(base_dir, safe_serialization=True)
+                    base_saved = True
+                except Exception as ee:
+                    raise RuntimeError(f"Failed to save base under base/: {ee}")
+
+            if base_saved:
+                print(f"[Best] Saved base weights to {base_dir}")
 
             # 2) Save LoRA adapter under lora/ (for reattachment/merge at runtime)
             if lora_enabled:

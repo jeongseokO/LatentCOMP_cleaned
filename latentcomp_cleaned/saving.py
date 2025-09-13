@@ -116,12 +116,23 @@ def save_base_and_lora(
         if not cfg.get("model_type"):
             cfg["model_type"] = model_type_default
 
+        # Choose auto_map target based on which remote-code files we actually copied
         auto_map = cfg.get("auto_map", {}) or {}
+        target = None
         if is_mistral:
-            auto_map["AutoModelForCausalLM"] = "modeling_mistral_partial_unified.MistralForCausalLM"
+            if remote_modeling_src_mistral_unified is not None:
+                target = "modeling_mistral_partial_unified.MistralForCausalLM"
+            elif remote_modeling_src_mistral is not None:
+                target = "modeling_mistral_partial.MistralForCausalLM"
         else:
-            auto_map["AutoModelForCausalLM"] = "modeling_partial_layer_unified.LlamaForCausalLM"
-        cfg["auto_map"] = auto_map
+            if remote_modeling_src_llama_unified is not None:
+                target = "modeling_partial_layer_unified.LlamaForCausalLM"
+            elif remote_modeling_src_llama is not None:
+                target = "modeling_partial_layer.LlamaForCausalLM"
+
+        if target is not None:
+            auto_map["AutoModelForCausalLM"] = target
+            cfg["auto_map"] = auto_map
 
         # Prefer bfloat16
         cfg["torch_dtype"] = "bfloat16"

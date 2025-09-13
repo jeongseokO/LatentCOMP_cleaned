@@ -110,9 +110,7 @@ def build_argparser():
     # 부분 레이어 프리필(Phase1) 옵션
     p.add_argument("--prefill_layers", type=int, default=0, help="Phase1에서 사용할 하위 레이어 수 (0이면 비활성, 전체 레이어)")
     # 커리큘럼 옵션: 1 epoch 동안 50%→25% 선형 축소, 이후 고정
-    p.add_argument("--prefill_start_ratio", type=float, default=0.5, help="prefill 시작 비율 (예: 0.5)")
-    p.add_argument("--prefill_end_ratio", type=float, default=0.25, help="prefill 종료 비율 (예: 0.25)")
-    p.add_argument("--prefill_anneal_epochs", type=float, default=1.0, help="시작→종료까지 걸리는 에폭 수 (예: 1.0)")
+    # 커리큘럼 관련 옵션 제거 (고정 prefill_layers만 사용)
 
     p.add_argument("--save_best_dir", type=str, default="./_best_ckpt")
 
@@ -532,30 +530,8 @@ def main():
         raise ValueError("system past_key_values is None")
     L_sys = sys_ids.size(1)
     n_layers = dc_num_layers(system_cache)
-    # clamp prefill_layers to [0, n_layers]
+    # clamp prefill_layers to [0, n_layers] (고정 사용)
     prefill_layers = max(0, min(int(args.prefill_layers), n_layers))
-    # 커리큘럼 타깃(검증/에폭 종료 후 고정 사용)
-    start_ratio = float(max(0.0, min(1.0, args.prefill_start_ratio)))
-    end_ratio = float(max(0.0, min(1.0, args.prefill_end_ratio)))
-    anneal_epochs = max(0.0, float(args.prefill_anneal_epochs))
-    target_prefill_layers = max(0, min(n_layers, int(round(end_ratio * n_layers))))
-
-    def _curriculum_prefill_layers(epoch_idx_zero_based: int, seen_in_epoch: int, total_in_epoch: int) -> int:
-        """선형 커리큘럼: 0→anneal_epochs 동안 start→end 비율로 감소, 이후 end 유지.
-        epoch_idx_zero_based: 0부터 시작하는 현재 에폭 인덱스
-        seen_in_epoch: 현재 에폭에서 처리한 샘플 수
-        total_in_epoch: 현재 에폭의 총 샘플 수
-        """
-        if anneal_epochs <= 0.0:
-            r = end_ratio
-        else:
-            stage = float(epoch_idx_zero_based) + (float(seen_in_epoch) / max(1.0, float(total_in_epoch)))
-            if stage >= anneal_epochs:
-                r = end_ratio
-            else:
-                t = stage / anneal_epochs
-                r = (1.0 - t) * start_ratio + t * end_ratio
-        return max(0, min(n_layers, int(round(r * n_layers))))
 
     # best-only 저장 준비
     save_best_dir_path = f"{HF_REPO_ID}/best" if HF_REPO_ID else args.save_best_dir
@@ -1367,16 +1343,13 @@ def main():
         train_example_count = 0
         train_nan_skipped = 0
         train_badgrad_skipped = 0
-        # 에폭 내 커리큘럼을 위한 카운터
-        seen_in_epoch = 0
+        # 커리큘럼 제거: 카운터 불필요
 
         for qs, ds, rlists, rstrs in tqdm(train_loader, desc=f"Epoch {epoch} [train]"):
             for i in range(len(qs)):
                 # 커리큘럼: prefill_layers를 스텝별로 선형 감소(첫 anneal_epochs 동안)
-                if int(args.prefill_layers) > 0:
-                    prefill_layers = max(0, min(n_layers, int(args.prefill_layers)))
-                else:
-                    prefill_layers = _curriculum_prefill_layers(epoch - 1, seen_in_epoch, train_size)
+                # 커리큘럼 제거: 사용자가 지정한 prefill_layers 고정
+                prefill_layers = max(0, min(n_layers, int(args.prefill_layers)))
                 if args.gen3:
                     if use_batch and isinstance(rlists[i], list) and len(rlists[i]) > 0:
                         loss = forward_gen3_batched_responses(qs[i], ds[i], rlists[i])
@@ -1417,7 +1390,7 @@ def main():
                 global_step += 1
                 train_example_count += 1
                 train_loss_sum += loss.item()
-                seen_in_epoch += 1
+                # 커리큘럼 제거: 스텝 카운팅 불필요
 
                 current_lr = optimizer.param_groups[0]["lr"]
                 wandb.log({
@@ -1441,10 +1414,8 @@ def main():
         # VALIDATION
         model.eval()
         # 검증은 타깃 비율로 고정 (안정성)
-        if int(args.prefill_layers) > 0:
-            prefill_layers = max(0, min(n_layers, int(args.prefill_layers)))
-        else:
-            prefill_layers = int(target_prefill_layers)
+        # 커리큘럼 제거: 검증 시에도 고정 prefill_layers 사용
+        prefill_layers = max(0, min(n_layers, int(args.prefill_layers)))
         val_loss_sum = 0.0
         val_example_count = 0
         val_nan_skipped = 0
@@ -1513,24 +1484,60 @@ def main():
             base_dir.mkdir(parents=True, exist_ok=True)
 
             # 1) Save vanilla base weights under base/
+            # If LoRA was enabled during training, avoid saving patched modules containing lora_A/B.
+            # Reload a clean base model from the original `args.model_name` instead.
             try:
-                base_to_save = unwrapped.get_base_model() if hasattr(unwrapped, "get_base_model") else unwrapped
+                from transformers import AutoModelForCausalLM
             except Exception:
-                base_to_save = unwrapped
+                AutoModelForCausalLM = None
+
+            base_saved = False
             try:
-                # Ensure no remote-code mapping leaks into base config
-                try:
-                    setattr(base_to_save.config, "auto_map", None)
-                except Exception:
-                    pass
-                # Save only the non-LoRA base parameters under base/
-                # This contains the original model with only special-token embeddings updated.
-                base_to_save.save_pretrained(base_dir, safe_serialization=True)
-                print(f"[Best] Saved base weights to {base_dir}")
+                if lora_enabled and AutoModelForCausalLM is not None:
+                    print("[Best] LoRA enabled → loading clean base from original model for base/ …")
+                    load_kwargs = {}
+                    # Prefer same cache dir as training if provided
+                    if args.cache_dir_model:
+                        load_kwargs["cache_dir"] = args.cache_dir_model
+                    # Allow remote code for families that require it
+                    load_kwargs["trust_remote_code"] = True
+                    clean_base = AutoModelForCausalLM.from_pretrained(args.model_name, **load_kwargs)
+                    # Ensure no remote-code mapping leaks into base config
+                    try:
+                        setattr(clean_base.config, "auto_map", None)
+                    except Exception:
+                        pass
+                    clean_base.save_pretrained(base_dir, safe_serialization=True)
+                    try:
+                        del clean_base
+                    except Exception:
+                        pass
+                    base_saved = True
+                else:
+                    # No LoRA or AutoModel unavailable → save current base as-is
+                    base_to_save = unwrapped.get_base_model() if hasattr(unwrapped, "get_base_model") else unwrapped
+                    try:
+                        setattr(base_to_save.config, "auto_map", None)
+                    except Exception:
+                        pass
+                    base_to_save.save_pretrained(base_dir, safe_serialization=True)
+                    base_saved = True
             except Exception as e:
-                # Do not save model parameters at the repo root by design.
-                # Explicitly fail to avoid leaking weights into root.
-                raise RuntimeError(f"Failed to save base under base/: {e}")
+                print(f"[Warn] Clean base save failed ({e}); falling back to current model base")
+                try:
+                    base_to_save = unwrapped.get_base_model() if hasattr(unwrapped, "get_base_model") else unwrapped
+                    try:
+                        setattr(base_to_save.config, "auto_map", None)
+                    except Exception:
+                        pass
+                    base_to_save.save_pretrained(base_dir, safe_serialization=True)
+                    base_saved = True
+                except Exception as ee:
+                    # Explicitly fail to avoid leaking weights into root.
+                    raise RuntimeError(f"Failed to save base under base/: {ee}")
+
+            if base_saved:
+                print(f"[Best] Saved base weights to {base_dir}")
 
             # 2) Save LoRA adapter under lora/ (for reattachment/merge at runtime)
             if lora_enabled:

@@ -64,7 +64,9 @@ def is_mistral(model_name: str) -> bool:
 def main():
     args = parse_args()
     method = args.train_method
-
+    args.also_cut_gen = False
+    print(f"[Unified] Training method: {method}")
+    print(f"CutGen: {args.also_cut_gen}")
     # Defaults to keep base vanilla for LOPA unless user insisted
     if method == "lopa" and not args.use_lora:
         print("[Note] LOPA with --use_lora not set. Enabling LoRA by default to keep base vanilla.")
@@ -75,7 +77,11 @@ def main():
     )
     repo_id = repo_basename if not args.hf_repo_org else f"{args.hf_repo_org}/{repo_basename}"
 
+    # Anchor outputs relative to this file if a relative path is given
+    here = Path(__file__).resolve().parent
     out_root = Path(args.out_root)
+    if not out_root.is_absolute():
+        out_root = (here / out_root).resolve()
     work_dir = out_root / repo_basename
     best_dir = work_dir / "best"
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -83,9 +89,8 @@ def main():
 
     # Map unified args to existing cleaned trainers
     # For gen1/gen2 we use train_latentcomp.py; for gen3 train_lopa.py
-    here = Path(__file__).resolve().parent
     trainer = here / "train_latentcomp.py"
-    trainer_gen3 = here / "train_lopa.py"
+    trainer_gen3 = here / "train_lopa_pure.py"
 
     if method == "lopa":
         cmd = [
@@ -103,10 +108,7 @@ def main():
         if args.cache_dir_model: cmd += ["--cache_dir_model", args.cache_dir_model]
         if args.cache_dir_tokenizer: cmd += ["--cache_dir_tokenizer", args.cache_dir_tokenizer]
         if args.use_lora: cmd += ["--use_lora", "True"]
-        if args.also_cut_gen: cmd += ["--also_cut_gen", "True"]
-        # We will handle Hub push after repack; don't push inside inner trainer
-        # Prefer original geometry
-        cmd += ["--pos_mode", "original"]
+        # Prefer original geometry via default; trainer uses unchanged positions
     else:
         # lcomp or combined → special tokens + optional partial prefill
         pl = 0 if method == "lcomp" else max(1, int(args.prefill_layers))
@@ -138,10 +140,11 @@ def main():
     # Repackage: ensure remote-code mapping to unified wrappers and enforce generate defaults
     # Identify partial-layer modeling sources to copy into best/
     # Prefer cleaned copies to avoid reliance on the legacy LatentCOMP folder
-    src_llama = Path("LatentCOMP_cleaned/modeling_partial_layer.py")
-    src_mistral = Path("LatentCOMP_cleaned/modeling_mistral_partial.py")
-    src_llama_unified = Path("LatentCOMP_cleaned/latentcomp_cleaned/remote/modeling_partial_layer_unified.py")
-    src_mistral_unified = Path("LatentCOMP_cleaned/latentcomp_cleaned/remote/modeling_mistral_partial_unified.py")
+    # Resolve remote-code sources relative to this file to avoid CWD dependence
+    src_llama = here / "modeling_partial_layer.py"
+    src_mistral = here / "modeling_mistral_partial.py"
+    src_llama_unified = here / "latentcomp_cleaned" / "remote" / "modeling_partial_layer_unified.py"
+    src_mistral_unified = here / "latentcomp_cleaned" / "remote" / "modeling_mistral_partial_unified.py"
 
     # There should be base/ under best_dir from the inner trainer; if not, just pass through
     if not (best_dir / "base").exists():
@@ -166,8 +169,8 @@ def main():
     # Otherwise, users can run `huggingface-cli upload` on best_dir manually.
     print(f"[Unified] Packaged best artifact at: {best_dir}")
 
-    # Optional: push to hub
-    if args.push_to_hub:
+    # Optional: push to hub (skip for lopa; trainer may already handle push)
+    if args.push_to_hub and method != "lopa":
         from huggingface_hub import create_repo, upload_folder
         token = os.environ.get("HF_TOKEN", "")
         if not token:
