@@ -292,8 +292,18 @@ def train(args):
         torch_dtype=dtype,
         cache_dir=args.cache_dir_model,
     )
-    # attn backend
+    # attn backend (force eager for Mistral for stability)
     impl = "sdpa" if args.attn_impl == "sdpa" else "eager"
+    try:
+        is_mistral = ("mistral" in str(args.model_name).lower()) or (
+            str(getattr(model.config, "model_type", "")).lower().startswith("mistral")
+        )
+    except Exception:
+        is_mistral = ("mistral" in str(args.model_name).lower())
+    if is_mistral:
+        impl = "eager"
+        if accelerator.is_main_process:
+            print("[Note] Detected Mistral; forcing attn_implementation='eager' for stability.")
     for k in ("attn_implementation", "_attn_implementation"):
         try:
             setattr(model.config, k, impl)
