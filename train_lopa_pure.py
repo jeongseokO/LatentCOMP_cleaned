@@ -66,6 +66,11 @@ def build_argparser():
 
     # backend
     p.add_argument("--attn_impl", type=str, choices=["sdpa", "eager"], default="sdpa")
+    # numeric controls
+    p.add_argument("--dtype", type=str, choices=["auto","bf16","fp16","fp32"], default="auto",
+                   help="Force compute dtype (auto=bf16 if supported else fp16; cpu=fp32)")
+    p.add_argument("--no_tf32", action="store_true", help="Disable TF32 matmul/cuDNN")
+    p.add_argument("--sdpa_math_only", action="store_true", help="Use SDPA math kernel only (disable flash/mem-e)")
     # schedule / clip
     p.add_argument("--warmup_steps", type=int, default=0)
     p.add_argument("--warmup_ratio", type=float, default=0.05)
@@ -211,16 +216,38 @@ def train(args):
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    # model
-    dtype = (
-        torch.bfloat16 if (device == "cuda" and torch.cuda.is_bf16_supported()) else (
-            torch.float16 if device == "cuda" else torch.float32
+    # model dtype selection
+    if args.dtype == "fp32":
+        dtype = torch.float32
+    elif args.dtype == "bf16":
+        dtype = torch.bfloat16
+    elif args.dtype == "fp16":
+        dtype = torch.float16
+    else:
+        dtype = (
+            torch.bfloat16 if (device == "cuda" and torch.cuda.is_bf16_supported()) else (
+                torch.float16 if device == "cuda" else torch.float32
+            )
         )
-    )
+    # optional: disable TF32 / fix SDPA kernel for stability
+    if args.no_tf32 and torch.cuda.is_available():
+        try:
+            torch.backends.cuda.matmul.allow_tf32 = False
+            torch.backends.cudnn.allow_tf32 = False
+        except Exception:
+            pass
+    if args.sdpa_math_only and torch.cuda.is_available():
+        try:
+            torch.backends.cuda.enable_flash_sdp(False)
+            torch.backends.cuda.enable_mem_efficient_sdp(False)
+            torch.backends.cuda.enable_math_sdp(True)
+        except Exception:
+            pass
+
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name,
         trust_remote_code=False,
-        torch_dtype=torch.bfloat16,
+        torch_dtype=dtype,
         cache_dir=args.cache_dir_model,
     )
     # attn backend
@@ -421,15 +448,43 @@ def train(args):
             torch.ones(1, assistant_ids.size(1), device=device, dtype=torch.long)
         ], dim=1)
 
-        out = model(
-            input_ids=assistant_ids,
-            past_key_values=combined,
-            attention_mask=attn_mask,
-            labels=assistant_ids.clone(),
-            use_cache=True,
-            return_dict=True,
-        )
-        return out.loss if out.loss is not None else torch.zeros((), device=device, dtype=torch.float32)
+        def _forward_and_loss_float32():
+            out_local = model(
+                input_ids=assistant_ids,
+                past_key_values=combined,
+                attention_mask=attn_mask,
+                use_cache=True,
+                return_dict=True,
+            )
+            logits = out_local.logits.to(torch.float32)
+            return F.cross_entropy(
+                logits.view(-1, logits.size(-1)),
+                assistant_ids.view(-1),
+                reduction="mean",
+            )
+
+        loss_val = _forward_and_loss_float32()
+        if not torch.isfinite(loss_val):
+            flash0 = mem0 = math0 = None
+            if torch.cuda.is_available():
+                try:
+                    flash0 = torch.backends.cuda.flash_sdp_enabled()
+                    mem0 = torch.backends.cuda.mem_efficient_sdp_enabled()
+                    math0 = torch.backends.cuda.math_sdp_enabled()
+                    torch.backends.cuda.enable_flash_sdp(False)
+                    torch.backends.cuda.enable_mem_efficient_sdp(False)
+                    torch.backends.cuda.enable_math_sdp(True)
+                except Exception:
+                    pass
+            loss_val = _forward_and_loss_float32()
+            if torch.cuda.is_available() and None not in (flash0, mem0, math0):
+                try:
+                    torch.backends.cuda.enable_flash_sdp(bool(flash0))
+                    torch.backends.cuda.enable_mem_efficient_sdp(bool(mem0))
+                    torch.backends.cuda.enable_math_sdp(bool(math0))
+                except Exception:
+                    pass
+        return loss_val if loss_val is not None else torch.zeros((), device=device, dtype=torch.float32)
 
     # training loop
     best_loss = float("inf")
