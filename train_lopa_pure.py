@@ -89,7 +89,7 @@ def build_argparser():
     p.add_argument("--prefill_layers", type=int, default=4)
     # data options
     p.add_argument("--max_responses_per_sample", type=int, default=5,
-                   help="Use up to this many responses from 'responses' list per record (expands dataset)")
+                   help="Deprecated (kept for compat; ignored if explode=True)")
 
     # LoRA (optional)
     p.add_argument("--use_lora", type=str, default="True")
@@ -116,8 +116,9 @@ def build_argparser():
     p.add_argument("--wandb_project", type=str, default=None)
     # data controls
     p.add_argument("--max_doc_tokens", type=int, default=2048)
-    p.add_argument("--response_pick", type=str, choices=["first","longest","random","best"], default="best")
-    p.add_argument("--explode", action="store_true")
+    # explode default True; add --no_explode to disable
+    p.add_argument("--explode", action="store_true", default=True)
+    p.add_argument("--no_explode", dest="explode", action="store_false")
     # HF Hub
     p.add_argument("--hf_repo_id", type=str, default=None, help="repo id to upload best/ (e.g., user/repo)")
     p.add_argument("--push_to_hub", action="store_true")
@@ -134,57 +135,17 @@ class QADataset(Dataset):
         path: str,
         tokenizer,
         max_doc_tokens: int = 2048,
-        response_pick: str = "best",
-        explode: bool = False,
+        explode: bool = True,
         seed: int = 42,
     ):
-        """Robust dataset loader for records with `responses` as list[str] or `response` as str.
+        """Dataset for records with `responses` list[str] or `response` str.
 
+        - explode=True(default): emit one sample per response candidate
+        - explode=False: use only the first non-empty response string
         - Filters empty question/document and overly long documents
-        - If `explode=True`, emits one sample per response candidate
-        - Otherwise selects a single response by `response_pick` policy: first|longest|random|best
-        - If no valid response found, skips the record
         """
-        assert response_pick in ("first", "longest", "random", "best")
         self.recs = []
         rng = random.Random(int(seed))
-
-        def score_answer(ans: str, doc: str, q: str) -> float:
-            # Lightweight heuristic to prefer "answer-like" responses over doc restatements
-            a = (ans or "").strip()
-            if not a:
-                return -1e9
-            al = a.lower()
-            score = 0.0
-            # positive cues
-            if any(kw in al for kw in ["the answer is", "final answer", "therefore", "정답은", "따라서", "답은"]):
-                score += 3.0
-            if any(ch.isdigit() for ch in a):
-                score += 0.6
-            if 8 <= len(a) <= 512:
-                score += 0.5
-            # discourage doc restatements
-            if al.startswith(("document", "context", "passage", "문서", "컨텍스트")):
-                score -= 1.5
-            try:
-                doc_set = set((doc or "").lower().split())
-                ans_set = set(al.split())
-                if doc_set and len(ans_set) >= 4:
-                    jacc = len(doc_set & ans_set) / max(1, len(ans_set))
-                    if jacc > 0.45:
-                        score -= 1.0
-                q_set = set((q or "").lower().split())
-                if q_set:
-                    overlap_q = len(q_set & ans_set) / max(1, len(ans_set))
-                    if overlap_q > 0.7:
-                        score -= 0.7
-            except Exception:
-                pass
-            if len(a) < 5:
-                score -= 1.0
-            if len(a) > 1500:
-                score -= 0.5
-            return score
 
         with open(path, encoding="utf-8") as f:
             for line in f:
@@ -221,15 +182,8 @@ class QADataset(Dataset):
                     for a in cands:
                         self.recs.append((q, d, a))
                 else:
-                    if response_pick == "first":
-                        a = cands[0]
-                    elif response_pick == "longest":
-                        a = max(cands, key=len)
-                    elif response_pick == "random":
-                        a = rng.choice(cands)
-                    else:  # best
-                        a = max(cands, key=lambda x: score_answer(x, d, q))
-                    self.recs.append((q, d, a))
+                    # fall back to the first candidate only
+                    self.recs.append((q, d, cands[0]))
 
     def __len__(self):
         return len(self.recs)
@@ -455,8 +409,7 @@ def train(args):
         args.data_file,
         tokenizer,
         max_doc_tokens=int(getattr(args, "max_doc_tokens", 2048)),
-        response_pick=str(getattr(args, "response_pick", "best")),
-        explode=bool(getattr(args, "explode", False)),
+        explode=bool(getattr(args, "explode", True)),
         seed=int(args.seed),
     )
     val_size = max(1, int(0.1 * len(ds_all)))
