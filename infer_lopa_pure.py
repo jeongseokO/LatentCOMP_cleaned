@@ -164,7 +164,7 @@ def _make_empty_kv(batch: int, num_kv: int, head_dim: int, device, dtype):
 def lopa_generate(model, tokenizer, system: str, document: str, question: str, *, K: int, device: str,
                   max_new_tokens: int = 256, min_length: int = 16, temperature: float = 0.7,
                   top_p: float = 0.9, top_k: int | None = None, do_sample: bool = True,
-                  debug: bool = False) -> str:
+                  debug: bool = False, debug_dir: Path | None = None) -> str:
     # Phase-1 ids
     msgs = build_messages(system, document, question, include_query=True)
     ids_phase1 = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=False)
@@ -172,6 +172,31 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
     sys_only   = tokens_from_messages(tokenizer, [{"role":"system","content":system}], device, add_generation_prompt=False)
     L_sys, L_all = sys_only.size(1), ids_phase1.size(1)
     L_doc = L_all - L_sys; assert L_doc > 0
+
+    if debug:
+        try:
+            # Render strings for full visibility
+            from pathlib import Path as _P
+            s_no_hdr = apply_chat_template(tokenizer, msgs, add_generation_prompt=False)
+            s_with_hdr = apply_chat_template(tokenizer, msgs, add_generation_prompt=True)
+            s_full = apply_chat_template(tokenizer, msgs + [{"role":"assistant","content":"<debug>"}], add_generation_prompt=False)
+            print(f"[debug] render lengths (chars): no_hdr={len(s_no_hdr)}, with_hdr={len(s_with_hdr)}, full={len(s_full)}")
+            def _print_chunked(label: str, text: str, chunk: int = 4000):
+                print(f"-- {label} --")
+                for i in range(0, len(text), chunk):
+                    print(text[i:i+chunk])
+            _print_chunked("rendered without header (full)", s_no_hdr)
+            _print_chunked("rendered with header (full)", s_with_hdr)
+            _print_chunked("full target rendered skeleton (full)", s_full)
+            # Optional file dump
+            if debug_dir is not None:
+                debug_dir.mkdir(parents=True, exist_ok=True)
+                (debug_dir / "infer_render_no_header.txt").write_text(s_no_hdr, encoding="utf-8")
+                (debug_dir / "infer_render_with_header.txt").write_text(s_with_hdr, encoding="utf-8")
+                (debug_dir / "infer_full_skeleton.txt").write_text(s_full, encoding="utf-8")
+                print(f"[debug] wrote renders to {debug_dir}")
+        except Exception as e:
+            print(f"[debug] render dump failed: {e}")
 
     # 1) system-only prefill (lower-K only)
     inner = _get_inner_model(model)
@@ -239,9 +264,15 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
         except Exception:
             pass
     if debug:
-        lower_l2 = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(0, K_eff)}) if K_eff>0 else []
-        upper_l2 = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(K_eff, n_layers)}) if K_eff<n_layers else []
-        print(f"[debug] after header/seed push: pushed={pushed} | lower_lens={lower_l2} | upper_lens={upper_l2}")
+        try:
+            lower_l2 = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(0, K_eff)}) if K_eff>0 else []
+            upper_l2 = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(K_eff, n_layers)}) if K_eff<n_layers else []
+            seed_dec = tokenizer.decode(last_pushed[0], skip_special_tokens=False) if last_pushed is not None else "<none>"
+            print(f"[debug] after header/seed push: pushed={pushed} | seed_dec='{seed_dec}' | lower_lens={lower_l2} | upper_lens={upper_l2}")
+            if debug_dir is not None and last_pushed is not None:
+                (debug_dir / "infer_seed_tokens.txt").write_text(seed_dec, encoding="utf-8")
+        except Exception:
+            pass
 
     # 5) decoding
     from transformers.generation import LogitsProcessorList
@@ -255,6 +286,8 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
     stop_ids = set()
     if eos_id is not None: stop_ids.add(int(eos_id))
     if eot_id is not None and eot_id != tokenizer.unk_token_id: stop_ids.add(int(eot_id))
+    if debug:
+        print(f"[debug] stop_ids={sorted(list(stop_ids))} | min_length={min_length} | do_sample={do_sample} | temp={temperature} | top_p={top_p} | top_k={top_k}")
     # Start token for decoding: if we pushed header/seed, use the last token we just pushed; otherwise use last of hdr
     last = last_pushed if pushed > 0 else ids_hdr[:, -1:]
     generated = torch.empty((1,0), dtype=torch.long, device=device)
@@ -268,6 +301,7 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
         if top_k is not None and top_k > 0:
             procs.append(TopKLogitsWarper(top_k=int(top_k), filter_value=-float("inf")))
     cur = 0
+    stop_reason = None
     while cur < max_new_tokens:
         out = model(input_ids=last, past_key_values=combined, attention_mask=None, use_cache=True, return_dict=True)
         combined = out.past_key_values
@@ -283,11 +317,20 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
             next_tok = torch.multinomial(probs, num_samples=1)
         else:
             next_tok = torch.argmax(logits, dim=-1, keepdim=True)
-        if int(next_tok.item()) in stop_ids: break
+        if int(next_tok.item()) in stop_ids:
+            stop_reason = f"stop_token:{int(next_tok.item())}"
+            break
         generated = torch.cat([generated, next_tok], dim=1)
         last = next_tok
         cur += 1
-    return tokenizer.decode(generated[0], skip_special_tokens=True)
+    if stop_reason is None and cur >= max_new_tokens:
+        stop_reason = "max_new_tokens"
+    text = tokenizer.decode(generated[0], skip_special_tokens=True)
+    if debug:
+        print(f"[debug] generation finished | tokens={generated.size(1)} | reason={stop_reason}")
+        if debug_dir is not None:
+            (debug_dir / "infer_generated.txt").write_text(text, encoding="utf-8")
+    return text
 
 
 def main():
@@ -351,11 +394,13 @@ def main():
     ensure_mistral_special_token(tokenizer, base)
     # attach LoRA if exists
     lora_path = best_dir / "lora"
+    merged_lora = False
     if lora_path.exists() and any(lora_path.iterdir()):
         try:
             from peft import PeftModel
             peft = PeftModel.from_pretrained(base, str(lora_path))
             model = peft.merge_and_unload().to(device).eval()
+            merged_lora = True
         except Exception:
             model = base.to(device).eval()
     else:
@@ -369,14 +414,21 @@ def main():
         except Exception:
             pass
     print("[infer] Forcing attn_implementation='eager' for all models (stability mode).")
+    if args.debug:
+        print(f"[debug] load base from: {base_load_src}")
+        print(f"[debug] lora path: {lora_path} | merged={merged_lora}")
+        tmpl = getattr(tokenizer, "chat_template", "") or ""
+        print(f"[debug] template contains Llama3 header? {('<|start_header_id|>' in tmpl)} | Mistral? {('[INST]' in tmpl)}")
 
+    # debug dir under best_dir
+    dbg_dir = (best_dir / "debug_infer") if args.debug else None
     text = lopa_generate(
         model, tokenizer,
         system=args.system, document=args.document, question=args.question,
         K=int(args.prefill_layers), device=device,
         max_new_tokens=args.max_new_tokens, min_length=args.min_length,
         temperature=args.temperature, top_p=args.top_p, top_k=args.top_k,
-        do_sample=bool(args.do_sample), debug=bool(args.debug),
+        do_sample=bool(args.do_sample), debug=bool(args.debug), debug_dir=dbg_dir,
     )
     print(text)
 
