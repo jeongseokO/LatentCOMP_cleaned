@@ -160,6 +160,77 @@ def _make_empty_kv(batch: int, num_kv: int, head_dim: int, device, dtype):
     v = torch.empty(shape, device=device, dtype=dtype)
     return k.contiguous(), v.contiguous()
 
+# ---------------------------------------------------------------------------
+# LoPA per-layer cache_position/position_ids adjustment
+#   Aligns per-layer positions when lower layers have prefill past and upper
+#   layers start from zero. Mirrors the trainer's runtime patch.
+# ---------------------------------------------------------------------------
+import contextlib
+
+@contextlib.contextmanager
+def lopa_cache_position_patch(model, past_key_values):
+    """
+    Match trainer's dynamic position alignment:
+    For each decoder layer, compute its current past length from the provided
+    past_key_values, and during forward adjust cache_position/position_ids by
+    off = start_val - past_len so that lower-K layers (with past=L_sys+L_doc)
+    and upper layers (with past=0) align logically for the current token.
+    """
+    base = model
+    if hasattr(base, "module"):
+        base = base.module  # unwrap (DDP/FSDP/Accelerate)
+    if hasattr(base, "model"):
+        inner = base.model
+    elif hasattr(base, "transformer"):
+        inner = base.transformer
+    else:
+        raise RuntimeError("Could not locate inner model")
+
+    # Per-layer past length from the provided cache snapshot
+    def _pkv_past_len(li: int) -> int:
+        if hasattr(past_key_values, "key_cache") and hasattr(past_key_values, "value_cache"):
+            return int(past_key_values.key_cache[li].shape[2])
+        if hasattr(past_key_values, "layers"):
+            return int(past_key_values.layers[li].keys.shape[2])
+        return int(past_key_values[li][0].shape[2])
+
+    n_layers = len(inner.layers)
+    past_lens = [_pkv_past_len(li) for li in range(n_layers)]
+
+    handles = []
+    for li, layer in enumerate(inner.layers):
+        layer._lopa_past = int(past_lens[li])
+
+        def _pre_hook(module, args, kwargs):
+            past_len = getattr(module, "_lopa_past", 0)
+            cp = kwargs.get("cache_position", None)
+            pi = kwargs.get("position_ids", None)
+            start_val = None
+            if isinstance(cp, torch.Tensor) and cp.numel() > 0:
+                start_val = int(cp.view(-1)[0].item())
+            elif isinstance(pi, torch.Tensor) and pi.numel() > 0:
+                start_val = int(pi.view(-1)[0].item())
+            if start_val is not None:
+                off = start_val - past_len
+                if off != 0:
+                    if isinstance(cp, torch.Tensor):
+                        kwargs["cache_position"] = cp - off
+                    if isinstance(pi, torch.Tensor):
+                        kwargs["position_ids"] = pi - off
+            return args, kwargs
+
+        h = layer.register_forward_pre_hook(_pre_hook, with_kwargs=True)
+        handles.append(h)
+
+    try:
+        yield
+    finally:
+        for h in handles:
+            h.remove()
+        for layer in inner.layers:
+            if hasattr(layer, "_lopa_past"):
+                delattr(layer, "_lopa_past")
+
 @torch.inference_mode()
 def lopa_generate(model, tokenizer, system: str, document: str, question: str, *, K: int, device: str,
                   max_new_tokens: int = 256, min_length: int = 16, temperature: float = 0.7,
@@ -242,8 +313,10 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
     if hdr_tail.numel() > 0:
         for j in range(hdr_tail.size(1)):
             step_tok = hdr_tail[:, j:j+1]
-            out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=None,
-                             use_cache=True, return_dict=True)
+            # Adjust per-layer positions while upper layers are shorter
+            with lopa_cache_position_patch(model, combined):
+                out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=None,
+                                 use_cache=True, return_dict=True)
             combined = out_seed.past_key_values
             pushed += 1
             last_pushed = step_tok
@@ -256,8 +329,9 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
                 step_tok = last_tok  # use existing </s> without appending
             else:
                 step_tok = last_tok
-            out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=None,
-                             use_cache=True, return_dict=True)
+            with lopa_cache_position_patch(model, combined):
+                out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=None,
+                                 use_cache=True, return_dict=True)
             combined = out_seed.past_key_values
             pushed += 1
             last_pushed = step_tok
@@ -303,7 +377,9 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
     cur = 0
     stop_reason = None
     while cur < max_new_tokens:
-        out = model(input_ids=last, past_key_values=combined, attention_mask=None, use_cache=True, return_dict=True)
+        # During decoding, upper layers remain shorter than lower ones; patch positions each step.
+        with lopa_cache_position_patch(model, combined):
+            out = model(input_ids=last, past_key_values=combined, attention_mask=None, use_cache=True, return_dict=True)
         combined = out.past_key_values
         logits = out.logits[:, -1, :].to(torch.float32)
         if stop_ids and cur < min_length:

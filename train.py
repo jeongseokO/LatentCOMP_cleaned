@@ -25,6 +25,23 @@ import shutil
 import subprocess
 from pathlib import Path
 
+
+def _get_rank() -> int:
+    """Return distributed rank from env if present, else 0.
+
+    This lets us run this orchestration script under torchrun without
+    accidentally spawning the inner trainer N times. Only rank 0 will
+    perform the actual training and repackaging.
+    """
+    for k in ("RANK", "LOCAL_RANK"):
+        v = os.environ.get(k)
+        if v is not None:
+            try:
+                return int(v)
+            except Exception:
+                pass
+    return 0
+
 from latentcomp_cleaned.naming import build_repo_name
 from latentcomp_cleaned.saving import save_base_and_lora
 
@@ -74,6 +91,11 @@ def is_mistral(model_name: str) -> bool:
 
 def main():
     args = parse_args()
+    rank = _get_rank()
+    if rank != 0:
+        # When launched via torchrun, ensure only rank 0 runs the inner trainer
+        print(f"[Unified] Detected non-zero rank={rank}; skipping inner launch.")
+        return
     method = args.train_method
     args.also_cut_gen = False
     print(f"[Unified] Training method: {method}")
