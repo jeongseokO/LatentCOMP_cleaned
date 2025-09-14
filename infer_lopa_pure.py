@@ -134,9 +134,8 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
     lower_layers = nn.ModuleList([full_layers[i] for i in range(K_eff)])
     model.model.layers = lower_layers
     dc_low_in = dc_from_subset(pkv_sys, list(range(K_eff))) if K_eff>0 else DynamicCache()
-    attn_doc_full = torch.cat([torch.ones(1, L_sys, device=device, dtype=torch.long),
-                               torch.ones(1, L_doc, device=device, dtype=torch.long)], dim=1)
-    out_low = model.model(input_ids=ids_phase1[:, L_sys:], past_key_values=dc_low_in, attention_mask=attn_doc_full,
+    # Allow per-layer past length mismatch by not forcing a shared mask
+    out_low = model.model(input_ids=ids_phase1[:, L_sys:], past_key_values=dc_low_in, attention_mask=None,
                           use_cache=True, return_dict=True)
     pkv_low = out_low.past_key_values
     model.model.layers = full_layers
@@ -166,11 +165,8 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
     last_pushed = None
     if hdr_tail.numel() > 0:
         for j in range(hdr_tail.size(1)):
-            past_len = pkv_get(combined, 0)[0].shape[2]
-            attn_mask = torch.cat([torch.ones(1, past_len, device=device, dtype=torch.long),
-                                   torch.ones(1, 1, device=device, dtype=torch.long)], dim=1)
             step_tok = hdr_tail[:, j:j+1]
-            out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=attn_mask,
+            out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=None,
                              use_cache=True, return_dict=True)
             combined = out_seed.past_key_values
             pushed += 1
@@ -184,10 +180,7 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
                 step_tok = last_tok  # use existing </s> without appending
             else:
                 step_tok = last_tok
-            past_len = pkv_get(combined, 0)[0].shape[2]
-            attn_mask = torch.cat([torch.ones(1, past_len, device=device, dtype=torch.long),
-                                   torch.ones(1, 1, device=device, dtype=torch.long)], dim=1)
-            out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=attn_mask,
+            out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=None,
                              use_cache=True, return_dict=True)
             combined = out_seed.past_key_values
             pushed += 1
@@ -202,7 +195,15 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
     # 5) decoding
     from transformers.generation import LogitsProcessorList
     from transformers.generation.logits_process import TemperatureLogitsWarper, TopPLogitsWarper, TopKLogitsWarper
+    # Treat both eos and eot as stopping tokens
     eos_id = tokenizer.eos_token_id
+    try:
+        eot_id = tokenizer.convert_tokens_to_ids("<|eot_id|>")
+    except Exception:
+        eot_id = None
+    stop_ids = set()
+    if eos_id is not None: stop_ids.add(int(eos_id))
+    if eot_id is not None and eot_id != tokenizer.unk_token_id: stop_ids.add(int(eot_id))
     # Start token for decoding: if we pushed header/seed, use the last token we just pushed; otherwise use last of hdr
     last = last_pushed if pushed > 0 else ids_hdr[:, -1:]
     generated = torch.empty((1,0), dtype=torch.long, device=device)
@@ -217,13 +218,12 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
             procs.append(TopKLogitsWarper(top_k=int(top_k), filter_value=-float("inf")))
     cur = 0
     while cur < max_new_tokens:
-        past_len = pkv_get(combined, 0)[0].shape[2]
-        attn_mask = torch.cat([torch.ones(1, past_len, device=device, dtype=torch.long),
-                               torch.ones(1, 1, device=device, dtype=torch.long)], dim=1)
-        out = model(input_ids=last, past_key_values=combined, attention_mask=attn_mask, use_cache=True, return_dict=True)
+        out = model(input_ids=last, past_key_values=combined, attention_mask=None, use_cache=True, return_dict=True)
         combined = out.past_key_values
         logits = out.logits[:, -1, :].to(torch.float32)
-        if eos_id is not None and cur < min_length: logits[:, eos_id] = -float("inf")
+        if stop_ids and cur < min_length:
+            for sid in stop_ids:
+                logits[:, sid] = -float("inf")
         inp = generated if generated.numel()>0 else last.new_zeros((1,0), dtype=torch.long, device=device)
         if procs is not None:
             logits = procs(inp, logits)
@@ -232,7 +232,7 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
             next_tok = torch.multinomial(probs, num_samples=1)
         else:
             next_tok = torch.argmax(logits, dim=-1, keepdim=True)
-        if eos_id is not None and int(next_tok.item()) == eos_id: break
+        if int(next_tok.item()) in stop_ids: break
         generated = torch.cat([generated, next_tok], dim=1)
         last = next_tok
         cur += 1

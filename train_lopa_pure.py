@@ -652,9 +652,9 @@ def train(args):
                 except Exception:
                     pass
                 print("-- system prompt (first 240 chars) --\n" + system_prompt[:240])
-                print("-- rendered without header (first 320 chars) --\n" + s_no_hdr[:320].replace("\n", "\\n"))
-                print("-- rendered with header (first 320 chars) --\n" + s_with_hdr[:320].replace("\n", "\\n"))
-                print("-- full target rendered (first 320 chars) --\n" + s_full[:320].replace("\n", "\\n"))
+                print("-- rendered without header (full) --\n" + s_no_hdr.replace("\n", "\\n"))
+                print("-- rendered with header (full) --\n" + s_with_hdr.replace("\n", "\\n"))
+                print("-- full target rendered (full) --\n" + s_full.replace("\n", "\\n"))
                 print(f"Seed tokens len={seed.size(1)} | decoded: {seed_dec[:160].replace('\n', ' ')}")
                 print(f"Assistant target len={assistant_ids.size(1)} | decoded head: {assist_dec.replace('\n',' ')[:240]}")
                 # Combined cache lengths per layer
