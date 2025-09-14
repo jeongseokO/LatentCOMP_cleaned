@@ -62,6 +62,9 @@ def build_argparser():
     p.add_argument("--lr", type=float, default=5e-5)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--prefill_layers", type=int, default=4)
+    # data options
+    p.add_argument("--max_responses_per_sample", type=int, default=5,
+                   help="Use up to this many responses from 'responses' list per record (expands dataset)")
 
     # LoRA (optional)
     p.add_argument("--use_lora", type=str, default="True")
@@ -97,7 +100,7 @@ def build_argparser():
 
 
 class QADataset(Dataset):
-    def __init__(self, path: str, tokenizer, max_doc_tokens: int = 2048):
+    def __init__(self, path: str, tokenizer, max_doc_tokens: int = 2048, max_responses_per_sample: int = 5):
         self.recs = []
         with open(path, encoding="utf-8") as f:
             for line in f:
@@ -115,13 +118,24 @@ class QADataset(Dataset):
                 except Exception:
                     n_tok = 0
                 if n_tok <= max_doc_tokens:
-                    # pick single response string if present
-                    r = None
-                    if isinstance(rec.get("response"), str):
+                    # Expand each record into multiple samples, one per response (up to limit)
+                    added = 0
+                    if isinstance(rec.get("responses"), list) and rec["responses"]:
+                        for r in rec["responses"]:
+                            r = str(r).strip()
+                            if not r:
+                                continue
+                            self.recs.append((q, d, r))
+                            added += 1
+                            if added >= max(1, int(max_responses_per_sample)):
+                                break
+                    elif isinstance(rec.get("response"), str):
                         r = rec["response"].strip()
-                    elif isinstance(rec.get("responses"), list) and rec["responses"]:
-                        r = str(rec["responses"][0]).strip()
-                    self.recs.append((q, d, r or ""))
+                        if r:
+                            self.recs.append((q, d, r))
+                    else:
+                        # no response labels → keep as unlabeled (empty string); will be skipped later
+                        self.recs.append((q, d, ""))
 
     def __len__(self):
         return len(self.recs)
@@ -136,12 +150,24 @@ def build_messages(system: str, document: str, question: str, include_query: boo
 
 
 def apply_chat_template(tokenizer, messages, add_generation_prompt: bool):
+    """Render chat with robust fallback across templates (Llama3 vs Mistral).
+
+    - Prefer tokenizer.apply_chat_template(..., add_generation_prompt=...)
+    - If that signature is unsupported, inspect tokenizer.chat_template and only append
+      an assistant header for Llama-3 style; for Mistral/INST style, append nothing.
+    """
     try:
-        return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt)
+        return tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=add_generation_prompt
+        )
     except TypeError:
+        tmpl = getattr(tokenizer, "chat_template", "") or ""
         s = tokenizer.apply_chat_template(messages, tokenize=False)
         if add_generation_prompt:
-            s += "<|start_header_id|>assistant<|end_header_id|>\n\n"
+            if "<|start_header_id|>" in tmpl:  # Llama 3 style
+                s += "<|start_header_id|>assistant<|end_header_id|>\n\n"
+            else:  # Mistral/INST or unknown → do not append explicit header
+                s += ""
         return s
 
 
@@ -328,7 +354,11 @@ def train(args):
             p.requires_grad = True
 
     # data
-    ds_all = QADataset(args.data_file, tokenizer)
+    ds_all = QADataset(
+        args.data_file,
+        tokenizer,
+        max_responses_per_sample=int(getattr(args, "max_responses_per_sample", 5)),
+    )
     val_size = max(1, int(0.1 * len(ds_all)))
     train_size = max(1, len(ds_all) - val_size)
     train_set, val_set = random_split(ds_all, [train_size, val_size])
@@ -468,14 +498,22 @@ def train(args):
         # assistant ids = after header
         assistant_ids = full_ids[:, ids_hdr.size(1):]
         if assistant_ids.numel() == 0:
-            return torch.zeros((), device=device, dtype=torch.float32)
+            # No target tokens → skip this sample by returning NaN (caller skips non-finite losses)
+            return torch.tensor(float('nan'), device=device)
 
         # Do NOT push header into past during training.
-        # Instead, include header as the first token(s) of the input and mask it out in labels
-        # so that the first predicted target is the first assistant token (A0).
-        hdr_tail = ids_hdr[:, L_all:]  # header-only sequence (could be multi-token)
-        inp = torch.cat([hdr_tail, assistant_ids], dim=1)  # [H, A0, A1, ...]
-        lab = inp.clone()  # 헤더도 라벨에 포함 → <header_start>가 'assistant'를 예측하도록 감독
+        # Instead, include header (if any) or user EOT seed (Mistral style) as the first input token(s),
+        # and mask them out in labels so the first predicted target is A0.
+        hdr_tail = ids_hdr[:, L_all:]  # header-only sequence (could be multi-token; often 0 for Mistral)
+        if hdr_tail.numel() > 0:
+            seed = hdr_tail  # Llama-3 style assistant header
+        else:
+            # Mistral style: use the last token of user turn as a seed
+            seed = ids_phase1[:, -1:]
+        inp = torch.cat([seed, assistant_ids], dim=1)  # [seed, A0, A1, ...]
+        lab = inp.clone()
+        # Mask seed tokens from loss
+        lab[:, :seed.size(1)] = -100
 
         attn_mask = torch.cat([
             torch.ones(1, pkv_get(combined, 0)[0].shape[2], device=device, dtype=torch.long),

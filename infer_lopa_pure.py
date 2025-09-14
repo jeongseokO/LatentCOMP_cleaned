@@ -21,12 +21,29 @@ def build_messages(system: str, document: str, question: str, include_query: boo
 
 
 def apply_chat_template(tokenizer, messages, add_generation_prompt: bool):
+    """Render chat with robust fallback across templates.
+
+    - Prefer tokenizer.apply_chat_template(..., add_generation_prompt=...)
+    - If that signature is unsupported, detect template style:
+        * Llama-3 style → append assistant header tokens
+        * Mistral/INST style → no explicit assistant header to append
+        * Unknown → do not append anything
+    """
     try:
-        return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt)
+        return tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=add_generation_prompt
+        )
     except TypeError:
+        tmpl = getattr(tokenizer, "chat_template", "") or ""
         s = tokenizer.apply_chat_template(messages, tokenize=False)
         if add_generation_prompt:
-            s += "<|start_header_id|>assistant<|end_header_id|>\n\n"
+            if "<|start_header_id|>" in tmpl:  # Llama 3 style
+                s += "<|start_header_id|>assistant<|end_header_id|>\n\n"
+            elif "[INST]" in tmpl or "</s>" in tmpl:  # Mistral style: no explicit header
+                s += ""
+            else:
+                # Unknown template → safest is to append nothing
+                s += ""
         return s
 
 
@@ -105,8 +122,12 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
         upper_l = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(K_eff, n_layers)}) if K_eff<n_layers else []
         print(f"[debug] L_sys={L_sys}, L_doc={L_doc}, K={K_eff} | lower_lens={lower_l} | upper_lens={upper_l}")
 
-    # 4) header push step-by-step
+    # 4) header push step-by-step (seed upper layers).
+    #    If no header exists (common for Mistral templates), push the user's end-of-turn token
+    #    i.e., the last token of the user prompt sequence (ids_phase1[:, -1:]).
     hdr_tail = ids_hdr[:, L_all:]
+    pushed = 0
+    last_pushed = None
     if hdr_tail.numel() > 0:
         for j in range(hdr_tail.size(1)):
             past_len = pkv_get(combined, 0)[0].shape[2]
@@ -116,17 +137,43 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
             out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=attn_mask,
                              use_cache=True, return_dict=True)
             combined = out_seed.past_key_values
+            pushed += 1
+            last_pushed = step_tok
+    else:
+        # Mistral-style: use the last token of the user turn as the seed (user EOT surrogate)
+        try:
+            step_tok = ids_phase1[:, -1:]
+            past_len = pkv_get(combined, 0)[0].shape[2]
+            attn_mask = torch.cat([torch.ones(1, past_len, device=device, dtype=torch.long),
+                                   torch.ones(1, 1, device=device, dtype=torch.long)], dim=1)
+            out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=attn_mask,
+                             use_cache=True, return_dict=True)
+            combined = out_seed.past_key_values
+            pushed += 1
+            last_pushed = step_tok
+        except Exception:
+            pass
+    if debug:
+        lower_l2 = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(0, K_eff)}) if K_eff>0 else []
+        upper_l2 = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(K_eff, n_layers)}) if K_eff<n_layers else []
+        print(f"[debug] after header/seed push: pushed={pushed} | lower_lens={lower_l2} | upper_lens={upper_l2}")
 
     # 5) decoding
     from transformers.generation import LogitsProcessorList
     from transformers.generation.logits_process import TemperatureLogitsWarper, TopPLogitsWarper, TopKLogitsWarper
     eos_id = tokenizer.eos_token_id
-    last = ids_hdr[:, -1:]
+    # Start token for decoding: if we pushed header/seed, use the last token we just pushed; otherwise use last of hdr
+    last = last_pushed if pushed > 0 else ids_hdr[:, -1:]
     generated = torch.empty((1,0), dtype=torch.long, device=device)
-    procs = LogitsProcessorList()
-    if temperature and temperature != 1.0: procs.append(TemperatureLogitsWarper(temperature=float(temperature)))
-    if top_p and top_p < 1.0: procs.append(TopPLogitsWarper(top_p=float(top_p), min_tokens_to_keep=1))
-    if top_k is not None and top_k > 0: procs.append(TopKLogitsWarper(top_k=int(top_k), filter_value=-float("inf")))
+    procs = None
+    if do_sample:
+        procs = LogitsProcessorList()
+        if temperature and temperature != 1.0:
+            procs.append(TemperatureLogitsWarper(temperature=float(temperature)))
+        if top_p and top_p < 1.0:
+            procs.append(TopPLogitsWarper(top_p=float(top_p), min_tokens_to_keep=1))
+        if top_k is not None and top_k > 0:
+            procs.append(TopKLogitsWarper(top_k=int(top_k), filter_value=-float("inf")))
     cur = 0
     while cur < max_new_tokens:
         past_len = pkv_get(combined, 0)[0].shape[2]
@@ -137,7 +184,8 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
         logits = out.logits[:, -1, :].to(torch.float32)
         if eos_id is not None and cur < min_length: logits[:, eos_id] = -float("inf")
         inp = generated if generated.numel()>0 else last.new_zeros((1,0), dtype=torch.long, device=device)
-        logits = procs(inp, logits)
+        if procs is not None:
+            logits = procs(inp, logits)
         if do_sample:
             probs = torch.softmax(logits, dim=-1)
             next_tok = torch.multinomial(probs, num_samples=1)
