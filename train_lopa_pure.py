@@ -808,22 +808,58 @@ def train(args):
             # Shift into absolute positions
             labels[:, seed_len:seed_len+max_a][pad_mask] = -100
 
-        # Tile combined cache to group size
-        combined_rep = _tile_cache_for_batch(combined, G)
+        def _is_oom(err: Exception) -> bool:
+            try:
+                msg = str(err).lower()
+                return ("out of memory" in msg) or ("cuda oom" in msg)
+            except Exception:
+                return False
 
-        # Forward without built-in loss; compute sample-average CE manually (ignore -100)
-        out = model(input_ids=inp, past_key_values=combined_rep, attention_mask=None, use_cache=True, return_dict=True)
-        logits = out.logits  # [G, L, V]
-        # Shift for CLM
-        logits = logits[:, :-1, :].contiguous()
-        tgt = labels[:, 1:].contiguous()
-        # Flatten
-        G_, L_, V_ = logits.shape
-        loss_flat = F.cross_entropy(logits.view(-1, V_), tgt.view(-1), ignore_index=-100, reduction='none')
-        loss_tok = loss_flat.view(G_, L_)
-        valid = (tgt.view(G_, L_) != -100)
-        loss_per_sample = (loss_tok.sum(dim=1) / valid.sum(dim=1).clamp_min(1))
-        group_loss = loss_per_sample.mean()
+        try:
+            # Tile combined cache to group size
+            combined_rep = _tile_cache_for_batch(combined, G)
+
+            # Forward without built-in loss; compute sample-average CE manually (ignore -100)
+            out = model(input_ids=inp, past_key_values=combined_rep, attention_mask=None, use_cache=True, return_dict=True)
+            logits = out.logits  # [G, L, V]
+            # Shift for CLM
+            logits = logits[:, :-1, :].contiguous()
+            tgt = labels[:, 1:].contiguous()
+            # Flatten
+            G_, L_, V_ = logits.shape
+            loss_flat = F.cross_entropy(logits.view(-1, V_), tgt.view(-1), ignore_index=-100, reduction='none')
+            loss_tok = loss_flat.view(G_, L_)
+            valid = (tgt.view(G_, L_) != -100)
+            loss_per_sample = (loss_tok.sum(dim=1) / valid.sum(dim=1).clamp_min(1))
+            group_loss = loss_per_sample.mean()
+        except RuntimeError as e:
+            if not _is_oom(e):
+                raise
+            # OOM fallback: clear cache and compute sequentially per response using shared prefill
+            if torch.cuda.is_available():
+                try:
+                    torch.cuda.empty_cache()
+                except Exception:
+                    pass
+            losses = []
+            try:
+                for a in assist_list:
+                    inp_i = torch.cat([seed, a], dim=1)  # [1, H+Li]
+                    labels_i = inp_i.clone()
+                    labels_i[:, :seed_len] = -100
+                    out_i = model(input_ids=inp_i, past_key_values=combined, attention_mask=None, use_cache=True, return_dict=True, labels=labels_i)
+                    if out_i.loss is None or not torch.isfinite(out_i.loss):
+                        continue
+                    losses.append(out_i.loss)
+                if not losses:
+                    return torch.tensor(float('nan'), device=device)
+                group_loss = torch.stack(losses, dim=0).mean()
+                if accelerator.is_main_process:
+                    print(f"[warn] OOM during grouped forward; fell back to sequential for qid={qid} (G={G}).")
+            except RuntimeError as e2:
+                if accelerator.is_main_process:
+                    print(f"[error] Sequential fallback failed: {e2}")
+                return torch.tensor(float('nan'), device=device)
 
         if debug and accelerator.is_main_process:
             try:
