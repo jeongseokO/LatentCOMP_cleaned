@@ -805,100 +805,34 @@ def train(args):
         if G == 0:
             return torch.tensor(float('nan'), device=device)
 
-        # Pad assistants to same length
-        max_a = max(x.size(1) for x in assist_list)
-        pad_id = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id
-        padded = []
-        valid_token_mask = []
+        # Always compute sequentially per response to minimize memory usage
+        a_lens = [int(x.size(1)) for x in assist_list]
+        losses = []
         for a in assist_list:
-            L = a.size(1)
-            if L < max_a:
-                pad = torch.full((1, max_a - L), int(pad_id), dtype=a.dtype, device=a.device)
-                a_pad = torch.cat([a, pad], dim=1)
-            else:
-                a_pad = a
-            padded.append(a_pad)
-            m = torch.zeros((1, max_a), dtype=torch.bool, device=a.device)
-            m[:, :L] = True
-            valid_token_mask.append(m)
-        assist_padded = torch.cat(padded, dim=0)  # [G, max_a]
-        valid_token_mask = torch.cat(valid_token_mask, dim=0)  # [G, max_a]
-
-        # Inputs and labels
-        seed_rep = seed.repeat(G, 1)  # [G, H]
-        inp = torch.cat([seed_rep, assist_padded], dim=1)  # [G, H+max_a]
-        labels = inp.clone()
-        # Mask seed and padded assistant positions
-        labels[:, :seed_len] = -100
-        # positions in assistant part that are padding → -100
-        if pad_id is not None:
-            # Build mask over assistant span
-            pad_mask = ~valid_token_mask  # True where pad
-            # Shift into absolute positions
-            labels[:, seed_len:seed_len+max_a][pad_mask] = -100
-
-        def _is_oom(err: Exception) -> bool:
             try:
-                msg = str(err).lower()
-                return ("out of memory" in msg) or ("cuda oom" in msg)
-            except Exception:
-                return False
-
-        try:
-            # Tile combined cache to group size
-            combined_rep = _tile_cache_for_batch(combined, G)
-
-            # Forward without built-in loss; compute sample-average CE manually (ignore -100)
-            out = model(input_ids=inp, past_key_values=combined_rep, attention_mask=None, use_cache=True, return_dict=True)
-            logits = out.logits  # [G, L, V]
-            # Shift for CLM
-            logits = logits[:, :-1, :].contiguous()
-            tgt = labels[:, 1:].contiguous()
-            # Flatten
-            G_, L_, V_ = logits.shape
-            loss_flat = F.cross_entropy(logits.view(-1, V_), tgt.view(-1), ignore_index=-100, reduction='none')
-            loss_tok = loss_flat.view(G_, L_)
-            valid = (tgt.view(G_, L_) != -100)
-            loss_per_sample = (loss_tok.sum(dim=1) / valid.sum(dim=1).clamp_min(1))
-            group_loss = loss_per_sample.mean()
-        except RuntimeError as e:
-            if not _is_oom(e):
-                raise
-            # OOM fallback: clear cache and compute sequentially per response using shared prefill
-            # Delete large temporaries to reduce fragmentation
-            for _name in ("combined_rep", "out", "logits", "tgt"):
-                try:
-                    del locals()[_name]
-                except Exception:
-                    pass
-            if torch.cuda.is_available():
-                try:
-                    torch.cuda.empty_cache()
-                except Exception:
-                    pass
-            losses = []
-            try:
-                for a in assist_list:
-                    inp_i = torch.cat([seed, a], dim=1)  # [1, H+Li]
-                    labels_i = inp_i.clone()
-                    labels_i[:, :seed_len] = -100
-                    out_i = model(input_ids=inp_i, past_key_values=combined, attention_mask=None, use_cache=True, return_dict=True, labels=labels_i)
-                    if out_i.loss is None or not torch.isfinite(out_i.loss):
-                        continue
-                    losses.append(out_i.loss)
-                if not losses:
-                    return torch.tensor(float('nan'), device=device)
-                group_loss = torch.stack(losses, dim=0).mean()
-                if accelerator.is_main_process:
-                    print(f"[warn] OOM during grouped forward; fell back to sequential for qid={qid} (G={G}).")
-            except RuntimeError as e2:
-                if accelerator.is_main_process:
-                    print(f"[error] Sequential fallback failed: {e2}")
-                return torch.tensor(float('nan'), device=device)
+                inp_i = torch.cat([seed, a], dim=1)  # [1, H+Li]
+                labels_i = inp_i.clone()
+                labels_i[:, :seed_len] = -100
+                out_i = model(input_ids=inp_i, past_key_values=combined, attention_mask=None, use_cache=True, return_dict=True, labels=labels_i)
+                if out_i.loss is None or not torch.isfinite(out_i.loss):
+                    continue
+                losses.append(out_i.loss)
+            except RuntimeError as e:
+                # Best-effort OOM mitigation per response
+                if torch.cuda.is_available():
+                    try:
+                        torch.cuda.empty_cache()
+                    except Exception:
+                        pass
+                continue
+        if not losses:
+            return torch.tensor(float('nan'), device=device)
+        group_loss = torch.stack(losses, dim=0).mean()
 
         if debug and accelerator.is_main_process:
             try:
-                print(f"[debug-group] qid={qid} | responses={G} | seed_len={seed_len} | a_max={max_a}")
+                a_max = max(a_lens) if a_lens else 0
+                print(f"[debug-group] qid={qid} | responses={G} | seed_len={seed_len} | a_max={a_max} (sequential)")
             except Exception:
                 pass
         return group_loss

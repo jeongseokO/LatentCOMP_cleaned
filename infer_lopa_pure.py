@@ -111,6 +111,55 @@ def dc_from_subset(pkv_src, idxs: List[int]) -> DynamicCache:
     return dc
 
 
+def _get_inner_model(m):
+    """Return the base model object that holds .layers (e.g., LlamaModel/MistralModel)."""
+    if hasattr(m, "module"):
+        m = m.module
+    # unwrap peft if any
+    try:
+        from peft import PeftModel
+        if isinstance(m, PeftModel):
+            try:
+                base = m.get_base_model()
+            except Exception:
+                base = getattr(m, "base_model", m)
+            if hasattr(base, "model"):
+                return base.model
+            if hasattr(base, "transformer"):
+                return base.transformer
+            m = base
+    except Exception:
+        pass
+    if hasattr(m, "model") and hasattr(m.model, "layers"):
+        return m.model
+    if hasattr(m, "transformer") and hasattr(m.transformer, "layers"):
+        return m.transformer
+    return m.model
+
+
+def _kv_meta_from_model(model_like):
+    """Return (num_kv_heads, head_dim, dtype)."""
+    try:
+        cfg = getattr(model_like, "config", None) or getattr(_get_inner_model(model_like), "config", None)
+    except Exception:
+        cfg = getattr(_get_inner_model(model_like), "config", None)
+    num_heads = getattr(cfg, "num_attention_heads", None)
+    num_kv = getattr(cfg, "num_key_value_heads", None) or num_heads
+    hidden = getattr(cfg, "hidden_size", None)
+    head_dim = (hidden // num_heads) if (hidden and num_heads) else None
+    try:
+        dtype = next(_get_inner_model(model_like).parameters()).dtype
+    except Exception:
+        dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+    return int(num_kv), int(head_dim), dtype
+
+
+def _make_empty_kv(batch: int, num_kv: int, head_dim: int, device, dtype):
+    shape = (batch, num_kv, 0, head_dim)
+    k = torch.empty(shape, device=device, dtype=dtype)
+    v = torch.empty(shape, device=device, dtype=dtype)
+    return k.contiguous(), v.contiguous()
+
 @torch.inference_mode()
 def lopa_generate(model, tokenizer, system: str, document: str, question: str, *, K: int, device: str,
                   max_new_tokens: int = 256, min_length: int = 16, temperature: float = 0.7,
@@ -124,32 +173,34 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
     L_sys, L_all = sys_only.size(1), ids_phase1.size(1)
     L_doc = L_all - L_sys; assert L_doc > 0
 
-    # 1) system-only prefill (base model)
-    out_sys = model.model(input_ids=sys_only, attention_mask=torch.ones_like(sys_only), use_cache=True, return_dict=True)
-    pkv_sys = out_sys.past_key_values
-    n_layers = pkv_len(pkv_sys); K_eff = max(0, min(int(K), n_layers))
-
-    # 2) lower-K doc pass (base model), upper continue 없음
-    full_layers: nn.ModuleList = model.model.layers
+    # 1) system-only prefill (lower-K only)
+    inner = _get_inner_model(model)
+    full_layers: nn.ModuleList = inner.layers
+    n_layers = len(full_layers)
+    K_eff = max(0, min(int(K), n_layers))
     lower_layers = nn.ModuleList([full_layers[i] for i in range(K_eff)])
-    model.model.layers = lower_layers
-    dc_low_in = dc_from_subset(pkv_sys, list(range(K_eff))) if K_eff>0 else DynamicCache()
-    # Allow per-layer past length mismatch by not forcing a shared mask
-    out_low = model.model(input_ids=ids_phase1[:, L_sys:], past_key_values=dc_low_in, attention_mask=None,
-                          use_cache=True, return_dict=True)
+    inner.layers = lower_layers
+    out_sys_low = inner(input_ids=sys_only, attention_mask=torch.ones_like(sys_only), use_cache=True, return_dict=True)
+    pkv_sys_low = out_sys_low.past_key_values
+
+    # 2) lower-K doc pass
+    dc_low_in = dc_from_subset(pkv_sys_low, list(range(K_eff))) if K_eff>0 else DynamicCache()
+    out_low = inner(input_ids=ids_phase1[:, L_sys:], past_key_values=dc_low_in, attention_mask=None,
+                    use_cache=True, return_dict=True)
     pkv_low = out_low.past_key_values
-    model.model.layers = full_layers
+    inner.layers = full_layers
 
     # 3) 결합: lower=sys+doc, upper=빈 past (length 0)
     combined = DynamicCache()
+    num_kv, head_dim, kv_dtype = _kv_meta_from_model(model)
     for li in range(n_layers):
-        k_sys, v_sys = pkv_get(pkv_sys, li)
         if li < K_eff:
-            k_cat = torch.cat([k_sys[:, :, :L_sys, :], pkv_get(pkv_low, li)[0][:, :, -L_doc:, :]], dim=2)
-            v_cat = torch.cat([v_sys[:, :, :L_sys, :], pkv_get(pkv_low, li)[1][:, :, -L_doc:, :]], dim=2)
+            k_cat = torch.cat([pkv_get(pkv_sys_low, li)[0][:, :, :L_sys, :],
+                               pkv_get(pkv_low, li)[0][:, :, -L_doc:, :]], dim=2)
+            v_cat = torch.cat([pkv_get(pkv_sys_low, li)[1][:, :, :L_sys, :],
+                               pkv_get(pkv_low, li)[1][:, :, -L_doc:, :]], dim=2)
         else:
-            k_cat = k_sys[:, :, :0, :]
-            v_cat = v_sys[:, :, :0, :]
+            k_cat, v_cat = _make_empty_kv(1, num_kv, head_dim, device, kv_dtype)
         combined.update(k_cat.contiguous(), v_cat.contiguous(), li)
 
     if debug:
