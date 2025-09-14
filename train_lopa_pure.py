@@ -308,6 +308,32 @@ def _get_inner_model(m):
     raise AttributeError("Could not locate inner base model with a .layers attribute")
 
 
+def _kv_meta_from_model(model_like):
+    """Return (num_kv_heads, head_dim, dtype) inferred from model config/params.
+    Assumes uniform heads across layers (true for Llama/Mistral).
+    """
+    try:
+        cfg = getattr(model_like, "config", None) or getattr(_get_inner_model(model_like), "config", None)
+    except Exception:
+        cfg = getattr(_get_inner_model(model_like), "config", None)
+    num_heads = getattr(cfg, "num_attention_heads", None)
+    num_kv = getattr(cfg, "num_key_value_heads", None) or num_heads
+    hidden = getattr(cfg, "hidden_size", None)
+    head_dim = (hidden // num_heads) if (hidden and num_heads) else None
+    try:
+        dtype = next(_get_inner_model(model_like).parameters()).dtype
+    except Exception:
+        dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+    return int(num_kv), int(head_dim), dtype
+
+
+def _make_empty_kv(batch: int, num_kv: int, head_dim: int, device, dtype):
+    shape = (batch, num_kv, 0, head_dim)
+    k = torch.empty(shape, device=device, dtype=dtype)
+    v = torch.empty(shape, device=device, dtype=dtype)
+    return k.contiguous(), v.contiguous()
+
+
 def _build_accelerator(args) -> Accelerator:
     # derive mixed precision from dtype option
     if args.dtype == "bf16":
@@ -523,24 +549,28 @@ def train(args):
         L_doc = L_all - L_sys
         assert L_doc > 0
 
-        # Phase-1: system-only prefill (all layers)
+        # Phase-1: system-only prefill (only lower-K layers)
         inner = _get_inner_model(model)
+        full_layers: nn.ModuleList = inner.layers
+        n_layers = len(full_layers)
+        K_eff = max(0, min(K, n_layers))
+        lower_layers = nn.ModuleList([full_layers[i] for i in range(0, K_eff)])
+        inner.layers = lower_layers
         with torch.no_grad():
-            out_sys = inner(
+            out_sys_low = inner(
                 input_ids=sys_only,
                 attention_mask=torch.ones_like(sys_only),
                 use_cache=True,
                 return_dict=True,
             )
-        pkv_sys = out_sys.past_key_values
-        n_layers = pkv_len(pkv_sys)
-        K_eff = max(0, min(K, n_layers))
+        pkv_sys_low = out_sys_low.past_key_values
+        inner.layers = full_layers
 
         # Phase-1: doc pass only for lower-K layers
         full_layers: nn.ModuleList = inner.layers
         lower_layers = nn.ModuleList([full_layers[i] for i in range(0, K_eff)])
         inner.layers = lower_layers
-        dc_low_in = dc_from_subset(pkv_sys, list(range(K_eff))) if K_eff > 0 else DynamicCache()
+        dc_low_in = dc_from_subset(pkv_sys_low, list(range(K_eff))) if K_eff > 0 else DynamicCache()
         with torch.no_grad():
             out_low = inner(
                 input_ids=ids_phase1[:, L_sys:],
@@ -554,9 +584,10 @@ def train(args):
 
         # Combine caches: lower => sys+doc; upper => no sys/no doc (start empty and grow from header)
         combined = DynamicCache()
+        num_kv, head_dim, kv_dtype = _kv_meta_from_model(model)
         for li in range(n_layers):
-            k_sys, v_sys = pkv_get(pkv_sys, li)
             if li < K_eff:
+                k_sys, v_sys = pkv_get(pkv_sys_low, li)
                 k_sys_slice = k_sys[:, :, :L_sys, :]
                 v_sys_slice = v_sys[:, :, :L_sys, :]
                 k_low, v_low = pkv_get(pkv_low, li)
@@ -566,9 +597,8 @@ def train(args):
                 v_cat = torch.cat([v_sys_slice, v_doc], dim=2).contiguous()
                 combined.update(k_cat, v_cat, li)
             else:
-                # Upper layers start with empty past (no sys/doc); use zero-length slice
-                k_empty = k_sys[:, :, :0, :].contiguous()
-                v_empty = v_sys[:, :, :0, :].contiguous()
+                # Upper layers start with empty past (no sys/doc)
+                k_empty, v_empty = _make_empty_kv(1, num_kv, head_dim, device, kv_dtype)
                 combined.update(k_empty, v_empty, li)
 
         # Build assistant continuation ids from response
@@ -714,18 +744,17 @@ def train(args):
         L_doc = L_all - L_sys
         assert L_doc > 0
 
-        # Prefill (system then doc for lower K), identical to single-sample
+        # Prefill (system then doc for lower K) — optimized to lower-K only
         inner = _get_inner_model(model)
-        with torch.no_grad():
-            out_sys = inner(input_ids=sys_only, attention_mask=torch.ones_like(sys_only), use_cache=True, return_dict=True)
-        pkv_sys = out_sys.past_key_values
-        n_layers_local = pkv_len(pkv_sys)
-        K_eff = max(0, min(K, n_layers_local))
-
         full_layers: nn.ModuleList = inner.layers
+        n_layers_local = len(full_layers)
+        K_eff = max(0, min(K, n_layers_local))
         lower_layers = nn.ModuleList([full_layers[i] for i in range(0, K_eff)])
         inner.layers = lower_layers
-        dc_low_in = dc_from_subset(pkv_sys, list(range(K_eff))) if K_eff > 0 else DynamicCache()
+        with torch.no_grad():
+            out_sys_low = inner(input_ids=sys_only, attention_mask=torch.ones_like(sys_only), use_cache=True, return_dict=True)
+        pkv_sys_low = out_sys_low.past_key_values
+        dc_low_in = dc_from_subset(pkv_sys_low, list(range(K_eff))) if K_eff > 0 else DynamicCache()
         with torch.no_grad():
             out_low = inner(
                 input_ids=ids_phase1[:, L_sys:],
@@ -738,9 +767,10 @@ def train(args):
         inner.layers = full_layers
 
         combined = DynamicCache()
+        num_kv, head_dim, kv_dtype = _kv_meta_from_model(model)
         for li in range(n_layers_local):
-            k_sys, v_sys = pkv_get(pkv_sys, li)
             if li < K_eff:
+                k_sys, v_sys = pkv_get(pkv_sys_low, li)
                 k_sys_slice = k_sys[:, :, :L_sys, :]
                 v_sys_slice = v_sys[:, :, :L_sys, :]
                 k_low, v_low = pkv_get(pkv_low, li)
@@ -749,8 +779,7 @@ def train(args):
                 combined.update(torch.cat([k_sys_slice, k_doc], dim=2).contiguous(),
                                 torch.cat([v_sys_slice, v_doc], dim=2).contiguous(), li)
             else:
-                k_empty = k_sys[:, :, :0, :].contiguous()
-                v_empty = v_sys[:, :, :0, :].contiguous()
+                k_empty, v_empty = _make_empty_kv(1, num_kv, head_dim, device, kv_dtype)
                 combined.update(k_empty, v_empty, li)
 
         # Seed tokens (header tail or fallback)
@@ -836,6 +865,12 @@ def train(args):
             if not _is_oom(e):
                 raise
             # OOM fallback: clear cache and compute sequentially per response using shared prefill
+            # Delete large temporaries to reduce fragmentation
+            for _name in ("combined_rep", "out", "logits", "tgt"):
+                try:
+                    del locals()[_name]
+                except Exception:
+                    pass
             if torch.cuda.is_available():
                 try:
                     torch.cuda.empty_cache()
