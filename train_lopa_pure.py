@@ -244,18 +244,47 @@ def dc_from_subset(pkv_src, layer_indices: List[int]) -> DynamicCache:
     return dc
 
 def _get_inner_model(m):
-    if hasattr(m, "module"): m = m.module
+    """Return the decoder backbone that owns `.layers` (robust across wrappers).
+
+    Unwraps DDP/Accelerate and PEFT, then tries common attributes; finally scans
+    child modules to find the first module that exposes a ModuleList `layers`.
+    """
+    # unwrap DDP/Accelerate
+    if hasattr(m, "module"):
+        m = m.module
+    # unwrap PEFT
     try:
         from peft import PeftModel
         if isinstance(m, PeftModel):
-            try: base = m.get_base_model()
-            except Exception: base = getattr(m, "base_model", m)
-            if hasattr(base, "model"): return base.model
-            if hasattr(base, "transformer"): return base.transformer
-            m = base
-    except Exception: pass
-    if hasattr(m, "model") and hasattr(m.model, "layers"): return m.model
-    if hasattr(m, "transformer") and hasattr(m.transformer, "layers"): return m.transformer
+            try:
+                m = m.get_base_model()
+            except Exception:
+                m = getattr(m, "base_model", m)
+    except Exception:
+        pass
+
+    # quick paths on common attributes
+    for attr in ("model", "transformer", "backbone", "base_model", "language_model"):
+        if hasattr(m, attr):
+            cand = getattr(m, attr)
+            # llama/mistral style
+            if hasattr(cand, "layers") and isinstance(getattr(cand, "layers", None), nn.ModuleList):
+                return cand
+            # some models nest under decoder
+            if hasattr(cand, "decoder") and hasattr(cand.decoder, "layers") and isinstance(cand.decoder.layers, nn.ModuleList):
+                return cand.decoder
+
+    # direct (already the backbone)
+    if hasattr(m, "layers") and isinstance(getattr(m, "layers", None), nn.ModuleList):
+        return m
+
+    # fallback: scan children to find first module exposing `.layers`
+    for child in m.modules():
+        if child is m:
+            continue
+        if hasattr(child, "layers") and isinstance(getattr(child, "layers", None), nn.ModuleList):
+            return child
+
     raise AttributeError("Could not locate inner base model with a .layers attribute")
 
 def _kv_meta_from_model(model_like):
@@ -283,10 +312,7 @@ def _make_empty_kv(batch: int, num_kv: int, head_dim: int, device, dtype):
 # ─────────────────────────────────────────────────────────────────────────────
 @contextlib.contextmanager
 def lopa_cache_position_patch(model, past_key_values):
-    base = model.module if hasattr(model, "module") else model
-    inner = getattr(base, "model", None) or getattr(base, "transformer", None)
-    if inner is None:
-        raise RuntimeError("Could not locate inner model")
+    inner = _get_inner_model(model)
 
     # 레이어별 실제 past 길이
     def _pkv_past_len(li: int) -> int:

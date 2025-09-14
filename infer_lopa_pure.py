@@ -112,29 +112,36 @@ def dc_from_subset(pkv_src, idxs: List[int]) -> DynamicCache:
 
 
 def _get_inner_model(m):
-    """Return the base model object that holds .layers (e.g., LlamaModel/MistralModel)."""
+    """Return the decoder backbone that owns `.layers` (robust across wrappers)."""
+    # unwrap DDP/Accelerate
     if hasattr(m, "module"):
         m = m.module
-    # unwrap peft if any
+    # unwrap PEFT
     try:
         from peft import PeftModel
         if isinstance(m, PeftModel):
             try:
-                base = m.get_base_model()
+                m = m.get_base_model()
             except Exception:
-                base = getattr(m, "base_model", m)
-            if hasattr(base, "model"):
-                return base.model
-            if hasattr(base, "transformer"):
-                return base.transformer
-            m = base
+                m = getattr(m, "base_model", m)
     except Exception:
         pass
-    if hasattr(m, "model") and hasattr(m.model, "layers"):
-        return m.model
-    if hasattr(m, "transformer") and hasattr(m.transformer, "layers"):
-        return m.transformer
-    return m.model
+
+    for attr in ("model", "transformer", "backbone", "base_model", "language_model"):
+        if hasattr(m, attr):
+            cand = getattr(m, attr)
+            if hasattr(cand, "layers") and isinstance(getattr(cand, "layers", None), nn.ModuleList):
+                return cand
+            if hasattr(cand, "decoder") and hasattr(cand.decoder, "layers") and isinstance(cand.decoder.layers, nn.ModuleList):
+                return cand.decoder
+    if hasattr(m, "layers") and isinstance(getattr(m, "layers", None), nn.ModuleList):
+        return m
+    for child in m.modules():
+        if child is m:
+            continue
+        if hasattr(child, "layers") and isinstance(getattr(child, "layers", None), nn.ModuleList):
+            return child
+    raise AttributeError("Could not locate inner base model with a .layers attribute")
 
 
 def _kv_meta_from_model(model_like):
@@ -176,15 +183,7 @@ def lopa_cache_position_patch(model, past_key_values):
     off = start_val - past_len so that lower-K layers (with past=L_sys+L_doc)
     and upper layers (with past=0) align logically for the current token.
     """
-    base = model
-    if hasattr(base, "module"):
-        base = base.module  # unwrap (DDP/FSDP/Accelerate)
-    if hasattr(base, "model"):
-        inner = base.model
-    elif hasattr(base, "transformer"):
-        inner = base.transformer
-    else:
-        raise RuntimeError("Could not locate inner model")
+    inner = _get_inner_model(model)
 
     # Per-layer past length from the provided cache snapshot
     def _pkv_past_len(li: int) -> int:
