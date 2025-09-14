@@ -604,10 +604,26 @@ def train(args):
                     print(f"assistant ids head[:16]: {assistant_ids[0, :min(16, assistant_ids.size(1))].tolist()}")
                 except Exception:
                     pass
-                print("-- system prompt (first 240 chars) --\n" + system_prompt[:240])
-                print("-- rendered without header (full) --\n" + s_no_hdr.replace("\n", "\\n"))
-                print("-- rendered with header (full) --\n" + s_with_hdr.replace("\n", "\\n"))
-                print("-- full target rendered (full) --\n" + s_full.replace("\n", "\\n"))
+                print("-- system prompt (full) --\n" + system_prompt)
+                # Print lengths and chunk long outputs to avoid log line truncation
+                print(f"Rendered lengths (chars): no_hdr={len(s_no_hdr)}, with_hdr={len(s_with_hdr)}, full={len(s_full)}")
+                def _print_chunked(label: str, text: str, chunk: int = 4000):
+                    print(f"-- {label} --")
+                    for i in range(0, len(text), chunk):
+                        print(text[i:i+chunk])
+                _print_chunked("rendered without header (full)", s_no_hdr)
+                _print_chunked("rendered with header (full)", s_with_hdr)
+                _print_chunked("full target rendered (full)", s_full)
+                # Also dump to files to guarantee full capture
+                try:
+                    out_dir = Path(getattr(args, "save_best_dir", "./_best_ckpt")) / "debug_first_sample"
+                    out_dir.mkdir(parents=True, exist_ok=True)
+                    (out_dir / "render_no_header.txt").write_text(s_no_hdr, encoding="utf-8")
+                    (out_dir / "render_with_header.txt").write_text(s_with_hdr, encoding="utf-8")
+                    (out_dir / "full_target.txt").write_text(s_full, encoding="utf-8")
+                    print(f"[debug] wrote full renders to {out_dir}")
+                except Exception as _e:
+                    print(f"[debug] file dump failed: {_e}")
                 print(f"Seed tokens len={seed.size(1)} | decoded: {seed_dec[:160].replace('\n', ' ')}")
                 print(f"Assistant target len={assistant_ids.size(1)} | decoded head: {assist_dec.replace('\n',' ')[:240]}")
                 # Combined cache lengths per layer
