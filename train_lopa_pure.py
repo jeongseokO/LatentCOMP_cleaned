@@ -119,6 +119,9 @@ def build_argparser():
     # explode default True; add --no_explode to disable
     p.add_argument("--explode", action="store_true", default=True)
     p.add_argument("--no_explode", dest="explode", action="store_false")
+    # group by question_id: yields one sample per record with list of responses
+    p.add_argument("--group_by_question", action="store_true", default=True)
+    p.add_argument("--no_group_by_question", dest="group_by_question", action="store_false")
     # HF Hub
     p.add_argument("--hf_repo_id", type=str, default=None, help="repo id to upload best/ (e.g., user/repo)")
     p.add_argument("--push_to_hub", action="store_true")
@@ -136,16 +139,19 @@ class QADataset(Dataset):
         tokenizer,
         max_doc_tokens: int = 2048,
         explode: bool = True,
+        group_by_question: bool = True,
         seed: int = 42,
     ):
         """Dataset for records with `responses` list[str] or `response` str.
 
-        - explode=True(default): emit one sample per response candidate
-        - explode=False: use only the first non-empty response string
+        - group_by_question=True(default): one sample per record, value=(question_id, question, document, [responses])
+        - if group_by_question=False and explode=True: expand responses to individual samples
+        - if group_by_question=False and explode=False: only first non-empty response
         - Filters empty question/document and overly long documents
         """
         self.recs = []
         rng = random.Random(int(seed))
+        auto_idx = 0
 
         with open(path, encoding="utf-8") as f:
             for line in f:
@@ -157,6 +163,15 @@ class QADataset(Dataset):
                 d = (rec.get("document") or "").strip()
                 if not q or not d:
                     continue
+                # question id (prefer explicit; fallback to auto index)
+                qid = rec.get("question_id", rec.get("id", None))
+                if qid is None:
+                    qid = f"auto_{auto_idx}"
+                    auto_idx += 1
+                try:
+                    qid = str(qid)
+                except Exception:
+                    qid = f"auto_{auto_idx}"; auto_idx += 1
                 # filter by doc length
                 try:
                     n_tok = len(tokenizer(d, add_special_tokens=False).input_ids)
@@ -178,12 +193,16 @@ class QADataset(Dataset):
                 if not cands:
                     continue
 
-                if explode:
-                    for a in cands:
-                        self.recs.append((q, d, a))
+                if group_by_question:
+                    # one record with all responses
+                    self.recs.append((qid, q, d, cands))
                 else:
-                    # fall back to the first candidate only
-                    self.recs.append((q, d, cands[0]))
+                    if explode:
+                        for a in cands:
+                            self.recs.append((qid, q, d, a))
+                    else:
+                        # fall back to the first candidate only
+                        self.recs.append((qid, q, d, cands[0]))
 
     def __len__(self):
         return len(self.recs)
@@ -410,6 +429,7 @@ def train(args):
         tokenizer,
         max_doc_tokens=int(getattr(args, "max_doc_tokens", 2048)),
         explode=bool(getattr(args, "explode", True)),
+        group_by_question=bool(getattr(args, "group_by_question", True)),
         seed=int(args.seed),
     )
     val_size = max(1, int(0.1 * len(ds_all)))
@@ -661,6 +681,148 @@ def train(args):
                     pass
         return loss_val if loss_val is not None else torch.zeros((), device=device, dtype=torch.float32)
 
+    def _tile_cache_for_batch(pkv_in: DynamicCache, batch: int) -> DynamicCache:
+        """Repeat past_key_values along batch dim to match group size."""
+        n_layers_local = pkv_len(pkv_in)
+        dc = DynamicCache()
+        for li in range(n_layers_local):
+            k, v = pkv_get(pkv_in, li)
+            # k/v: [1, heads, past, dim] → [batch, heads, past, dim]
+            k_rep = k.repeat(batch, 1, 1, 1).contiguous()
+            v_rep = v.repeat(batch, 1, 1, 1).contiguous()
+            dc.update(k_rep, v_rep, li)
+        return dc
+
+    def compute_loss_on_group(qid: str, q: str, d: str, responses: List[str], debug: bool = False) -> torch.Tensor:
+        # messages and ids
+        msgs = build_messages(system_prompt, d, q, include_query=True)
+        ids_phase1 = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=False)
+        ids_hdr    = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=True)
+        sys_only   = tokens_from_messages(tokenizer, [{"role":"system", "content":system_prompt}], device, add_generation_prompt=False)
+
+        L_sys = sys_only.size(1)
+        L_all = ids_phase1.size(1)
+        L_doc = L_all - L_sys
+        assert L_doc > 0
+
+        # Prefill (system then doc for lower K), identical to single-sample
+        inner = _get_inner_model(model)
+        with torch.no_grad():
+            out_sys = inner(input_ids=sys_only, attention_mask=torch.ones_like(sys_only), use_cache=True, return_dict=True)
+        pkv_sys = out_sys.past_key_values
+        n_layers_local = pkv_len(pkv_sys)
+        K_eff = max(0, min(K, n_layers_local))
+
+        full_layers: nn.ModuleList = inner.layers
+        lower_layers = nn.ModuleList([full_layers[i] for i in range(0, K_eff)])
+        inner.layers = lower_layers
+        dc_low_in = dc_from_subset(pkv_sys, list(range(K_eff))) if K_eff > 0 else DynamicCache()
+        with torch.no_grad():
+            out_low = inner(
+                input_ids=ids_phase1[:, L_sys:],
+                past_key_values=dc_low_in,
+                attention_mask=None,
+                use_cache=True,
+                return_dict=True,
+            )
+        pkv_low = out_low.past_key_values
+        inner.layers = full_layers
+
+        combined = DynamicCache()
+        for li in range(n_layers_local):
+            k_sys, v_sys = pkv_get(pkv_sys, li)
+            if li < K_eff:
+                k_sys_slice = k_sys[:, :, :L_sys, :]
+                v_sys_slice = v_sys[:, :, :L_sys, :]
+                k_low, v_low = pkv_get(pkv_low, li)
+                k_doc = k_low[:, :, -L_doc:, :]
+                v_doc = v_low[:, :, -L_doc:, :]
+                combined.update(torch.cat([k_sys_slice, k_doc], dim=2).contiguous(),
+                                torch.cat([v_sys_slice, v_doc], dim=2).contiguous(), li)
+            else:
+                k_empty = k_sys[:, :, :0, :].contiguous()
+                v_empty = v_sys[:, :, :0, :].contiguous()
+                combined.update(k_empty, v_empty, li)
+
+        # Seed tokens (header tail or fallback)
+        hdr_tail = ids_hdr[:, L_all:]
+        if hdr_tail.numel() > 0:
+            seed = hdr_tail  # [1, H]
+        else:
+            tok_id = tokenizer.convert_tokens_to_ids(MISTRAL_ASSIST_START)
+            seed = torch.tensor([[int(tok_id)]], device=device, dtype=ids_hdr.dtype) if tok_id is not None else ids_phase1[:, -1:]
+        seed_len = seed.size(1)
+
+        # Build assistant ids per response
+        assist_list: List[torch.Tensor] = []
+        for resp in responses:
+            if not isinstance(resp, str) or not resp.strip():
+                continue
+            msgs_ass = msgs + [{"role": "assistant", "content": resp}]
+            full_ids = tokens_from_messages(tokenizer, msgs_ass, device, add_generation_prompt=False)
+            a = full_ids[:, ids_hdr.size(1):]
+            if a.numel() > 0:
+                assist_list.append(a)
+        G = len(assist_list)
+        if G == 0:
+            return torch.tensor(float('nan'), device=device)
+
+        # Pad assistants to same length
+        max_a = max(x.size(1) for x in assist_list)
+        pad_id = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id
+        padded = []
+        valid_token_mask = []
+        for a in assist_list:
+            L = a.size(1)
+            if L < max_a:
+                pad = torch.full((1, max_a - L), int(pad_id), dtype=a.dtype, device=a.device)
+                a_pad = torch.cat([a, pad], dim=1)
+            else:
+                a_pad = a
+            padded.append(a_pad)
+            m = torch.zeros((1, max_a), dtype=torch.bool, device=a.device)
+            m[:, :L] = True
+            valid_token_mask.append(m)
+        assist_padded = torch.cat(padded, dim=0)  # [G, max_a]
+        valid_token_mask = torch.cat(valid_token_mask, dim=0)  # [G, max_a]
+
+        # Inputs and labels
+        seed_rep = seed.repeat(G, 1)  # [G, H]
+        inp = torch.cat([seed_rep, assist_padded], dim=1)  # [G, H+max_a]
+        labels = inp.clone()
+        # Mask seed and padded assistant positions
+        labels[:, :seed_len] = -100
+        # positions in assistant part that are padding → -100
+        if pad_id is not None:
+            # Build mask over assistant span
+            pad_mask = ~valid_token_mask  # True where pad
+            # Shift into absolute positions
+            labels[:, seed_len:seed_len+max_a][pad_mask] = -100
+
+        # Tile combined cache to group size
+        combined_rep = _tile_cache_for_batch(combined, G)
+
+        # Forward without built-in loss; compute sample-average CE manually (ignore -100)
+        out = model(input_ids=inp, past_key_values=combined_rep, attention_mask=None, use_cache=True, return_dict=True)
+        logits = out.logits  # [G, L, V]
+        # Shift for CLM
+        logits = logits[:, :-1, :].contiguous()
+        tgt = labels[:, 1:].contiguous()
+        # Flatten
+        G_, L_, V_ = logits.shape
+        loss_flat = F.cross_entropy(logits.view(-1, V_), tgt.view(-1), ignore_index=-100, reduction='none')
+        loss_tok = loss_flat.view(G_, L_)
+        valid = (tgt.view(G_, L_) != -100)
+        loss_per_sample = (loss_tok.sum(dim=1) / valid.sum(dim=1).clamp_min(1))
+        group_loss = loss_per_sample.mean()
+
+        if debug and accelerator.is_main_process:
+            try:
+                print(f"[debug-group] qid={qid} | responses={G} | seed_len={seed_len} | a_max={max_a}")
+            except Exception:
+                pass
+        return group_loss
+
     # training loop
     best_loss = float("inf")
     best_dir = Path(args.save_best_dir)
@@ -676,13 +838,23 @@ def train(args):
             run = None
 
     def _iter_items(batch):
-        # Support tuple-of-lists (default collate) and list-of-tuples
+        # Support tuple-of-lists (default collate) and list-of-tuples, in shapes:
+        # - grouped: (qid_list, q_list, d_list, responses_list)
+        # - single:  (qid_list, q_list, d_list, resp_list)
+        # - legacy:  (q_list, d_list, resp_list)
         if isinstance(batch, (list, tuple)):
-            if len(batch) == 3 and all(isinstance(x, (list, tuple)) for x in batch):
-                return list(zip(*batch))
-            else:
-                return list(batch)
+            # If it's a tuple of equal-length lists, zip them
+            try:
+                if all(hasattr(x, '__len__') for x in batch) and len(set(len(x) for x in batch)) == 1:
+                    return list(zip(*batch))
+            except Exception:
+                pass
+            return list(batch)
+        # Fallback: single item
         try:
+            if len(batch) == 4:
+                qid, q, d, r = batch
+                return [(qid, q, d, r)]
             q, d, r = batch
             return [(q, d, r)]
         except Exception:
@@ -703,12 +875,25 @@ def train(args):
             loss_accum = 0.0
             loss_vals = []
             valid_in_step = 0
-            for iidx, (q, d, r) in enumerate(items):
+            for iidx, it in enumerate(items):
                 do_debug = (epoch == 1) and (not debug_print_done) and (bidx == 0) and (iidx == 0)
-                loss_i = compute_loss_on_sample(q, d, r, debug=do_debug)
+                # Accept both grouped and single-response samples
+                try:
+                    if len(it) == 4 and isinstance(it[3], list):
+                        qid, q, d, rs = it
+                        loss_i = compute_loss_on_group(str(qid), q, d, rs, debug=do_debug)
+                    elif len(it) == 4:
+                        qid, q, d, r = it
+                        loss_i = compute_loss_on_sample(q, d, r, debug=do_debug)
+                    else:
+                        # Legacy triple (q, d, r)
+                        q, d, r = it
+                        loss_i = compute_loss_on_sample(q, d, r, debug=do_debug)
+                except Exception as _e:
+                    print(f"[Warn] batch item parse failed: {_e}")
+                    continue
                 if do_debug:
                     debug_print_done = True
-                # Skip NaN/Inf losses
                 if not torch.isfinite(loss_i):
                     train_nan_skipped += 1
                     continue
@@ -755,8 +940,19 @@ def train(args):
                 items = _iter_items(batch)
                 if not items:
                     continue
-                for q, d, r in items:
-                    loss_i = compute_loss_on_sample(q, d, r)
+                for it in items:
+                    try:
+                        if len(it) == 4 and isinstance(it[3], list):
+                            qid, q, d, rs = it
+                            loss_i = compute_loss_on_group(str(qid), q, d, rs, debug=False)
+                        elif len(it) == 4:
+                            qid, q, d, r = it
+                            loss_i = compute_loss_on_sample(q, d, r, debug=False)
+                        else:
+                            q, d, r = it
+                            loss_i = compute_loss_on_sample(q, d, r, debug=False)
+                    except Exception:
+                        continue
                     if not torch.isfinite(loss_i):
                         val_nan_skipped += 1
                         continue

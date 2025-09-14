@@ -47,6 +47,9 @@ def parse_args():
     # explode default True; allow disabling via --no_explode
     p.add_argument("--explode", action="store_true", default=True)
     p.add_argument("--no_explode", dest="explode", action="store_false")
+    # group responses by question id (default on)
+    p.add_argument("--group_by_question", action="store_true", default=True)
+    p.add_argument("--no_group_by_question", dest="group_by_question", action="store_false")
     # phased LatentCOMP toggles
     p.add_argument("--include_query", type=str, default="True", help="lcomp: include query around specials")
     p.add_argument("--include_specials", type=str, default="True", help="lcomp: include latent specials")
@@ -120,6 +123,11 @@ def main():
             cmd += ["--explode"]
         else:
             cmd += ["--no_explode"]
+        # propagate grouping
+        if args.group_by_question:
+            cmd += ["--group_by_question"]
+        else:
+            cmd += ["--no_group_by_question"]
         if args.cache_dir_model: cmd += ["--cache_dir_model", args.cache_dir_model]
         if args.cache_dir_tokenizer: cmd += ["--cache_dir_tokenizer", args.cache_dir_tokenizer]
         if args.use_lora: cmd += ["--use_lora", "True"]
