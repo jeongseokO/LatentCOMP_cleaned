@@ -45,6 +45,31 @@ from transformers.cache_utils import DynamicCache
 # Safety: avoid HF tokenizers parallel threads before forking (DataLoader workers)
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
+# Special assistant-start token for Mistral-style templates
+MISTRAL_ASSIST_START = "<Mistral_start>"
+
+def _is_mistral_template(tokenizer) -> bool:
+    tmpl = getattr(tokenizer, "chat_template", "") or ""
+    name = getattr(getattr(tokenizer, "init_kwargs", {}), "get", lambda k, d=None: d)("name_or_path", "")
+    return ("[INST]" in tmpl) or ("mistral" in str(name).lower()) or ("mistral" in tmpl.lower())
+
+def ensure_mistral_special_token(tokenizer, model=None):
+    if not _is_mistral_template(tokenizer):
+        return False
+    add_tok = []
+    cur = set(tokenizer.get_vocab().keys())
+    if MISTRAL_ASSIST_START not in cur:
+        add_tok.append(MISTRAL_ASSIST_START)
+    if add_tok:
+        tokenizer.add_special_tokens({"additional_special_tokens": tokenizer.special_tokens_map_extended.get("additional_special_tokens", []) + add_tok})
+        if model is not None:
+            try:
+                model.resize_token_embeddings(len(tokenizer))
+            except Exception:
+                pass
+        return True
+    return False
+
 
 def set_seed(seed: int):
     random.seed(seed)
@@ -89,6 +114,10 @@ def build_argparser():
     p.add_argument("--cache_dir_model", type=str, default=None)
     p.add_argument("--cache_dir_tokenizer", type=str, default=None)
     p.add_argument("--wandb_project", type=str, default=None)
+    # data controls
+    p.add_argument("--max_doc_tokens", type=int, default=2048)
+    p.add_argument("--response_pick", type=str, choices=["first","longest","random","best"], default="best")
+    p.add_argument("--explode", action="store_true")
     # HF Hub
     p.add_argument("--hf_repo_id", type=str, default=None, help="repo id to upload best/ (e.g., user/repo)")
     p.add_argument("--push_to_hub", action="store_true")
@@ -100,42 +129,107 @@ def build_argparser():
 
 
 class QADataset(Dataset):
-    def __init__(self, path: str, tokenizer, max_doc_tokens: int = 2048, max_responses_per_sample: int = 5):
+    def __init__(
+        self,
+        path: str,
+        tokenizer,
+        max_doc_tokens: int = 2048,
+        response_pick: str = "best",
+        explode: bool = False,
+        seed: int = 42,
+    ):
+        """Robust dataset loader for records with `responses` as list[str] or `response` as str.
+
+        - Filters empty question/document and overly long documents
+        - If `explode=True`, emits one sample per response candidate
+        - Otherwise selects a single response by `response_pick` policy: first|longest|random|best
+        - If no valid response found, skips the record
+        """
+        assert response_pick in ("first", "longest", "random", "best")
         self.recs = []
+        rng = random.Random(int(seed))
+
+        def score_answer(ans: str, doc: str, q: str) -> float:
+            # Lightweight heuristic to prefer "answer-like" responses over doc restatements
+            a = (ans or "").strip()
+            if not a:
+                return -1e9
+            al = a.lower()
+            score = 0.0
+            # positive cues
+            if any(kw in al for kw in ["the answer is", "final answer", "therefore", "정답은", "따라서", "답은"]):
+                score += 3.0
+            if any(ch.isdigit() for ch in a):
+                score += 0.6
+            if 8 <= len(a) <= 512:
+                score += 0.5
+            # discourage doc restatements
+            if al.startswith(("document", "context", "passage", "문서", "컨텍스트")):
+                score -= 1.5
+            try:
+                doc_set = set((doc or "").lower().split())
+                ans_set = set(al.split())
+                if doc_set and len(ans_set) >= 4:
+                    jacc = len(doc_set & ans_set) / max(1, len(ans_set))
+                    if jacc > 0.45:
+                        score -= 1.0
+                q_set = set((q or "").lower().split())
+                if q_set:
+                    overlap_q = len(q_set & ans_set) / max(1, len(ans_set))
+                    if overlap_q > 0.7:
+                        score -= 0.7
+            except Exception:
+                pass
+            if len(a) < 5:
+                score -= 1.0
+            if len(a) > 1500:
+                score -= 0.5
+            return score
+
         with open(path, encoding="utf-8") as f:
             for line in f:
                 try:
                     rec = json.loads(line)
                 except Exception:
                     continue
-                q = rec.get("question", "").strip()
-                d = rec.get("document", "").strip()
+                q = (rec.get("question") or "").strip()
+                d = (rec.get("document") or "").strip()
                 if not q or not d:
                     continue
-                # quick filter by doc length
+                # filter by doc length
                 try:
                     n_tok = len(tokenizer(d, add_special_tokens=False).input_ids)
                 except Exception:
                     n_tok = 0
-                if n_tok <= max_doc_tokens:
-                    # Expand each record into multiple samples, one per response (up to limit)
-                    added = 0
-                    if isinstance(rec.get("responses"), list) and rec["responses"]:
-                        for r in rec["responses"]:
-                            r = str(r).strip()
-                            if not r:
-                                continue
-                            self.recs.append((q, d, r))
-                            added += 1
-                            if added >= max(1, int(max_responses_per_sample)):
-                                break
-                    elif isinstance(rec.get("response"), str):
-                        r = rec["response"].strip()
-                        if r:
-                            self.recs.append((q, d, r))
-                    else:
-                        # no response labels → keep as unlabeled (empty string); will be skipped later
-                        self.recs.append((q, d, ""))
+                if n_tok > max_doc_tokens:
+                    continue
+
+                # collect candidates
+                cands: List[str] = []
+                rs = rec.get("responses")
+                if isinstance(rs, list):
+                    for s in rs:
+                        if isinstance(s, str) and s.strip():
+                            cands.append(s.strip())
+                r_single = rec.get("response")
+                if (not cands) and isinstance(r_single, str) and r_single.strip():
+                    cands = [r_single.strip()]
+                if not cands:
+                    continue
+
+                if explode:
+                    for a in cands:
+                        self.recs.append((q, d, a))
+                else:
+                    if response_pick == "first":
+                        a = cands[0]
+                    elif response_pick == "longest":
+                        a = max(cands, key=len)
+                    elif response_pick == "random":
+                        a = rng.choice(cands)
+                    else:  # best
+                        a = max(cands, key=lambda x: score_answer(x, d, q))
+                    self.recs.append((q, d, a))
 
     def __len__(self):
         return len(self.recs)
@@ -283,6 +377,7 @@ def train(args):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
+    # Ensure Mistral assistant-start special token exists and resize model later
 
     # model dtype selection
     if args.dtype == "fp32":
@@ -318,6 +413,8 @@ def train(args):
         torch_dtype=dtype,
         cache_dir=args.cache_dir_model,
     )
+    # If Mistral template, add special token and resize embeddings
+    _ = ensure_mistral_special_token(tokenizer, model)
     # attn backend — force eager for all models (stability first)
     impl = "eager"
     if accelerator.is_main_process:
@@ -357,7 +454,10 @@ def train(args):
     ds_all = QADataset(
         args.data_file,
         tokenizer,
-        max_responses_per_sample=int(getattr(args, "max_responses_per_sample", 5)),
+        max_doc_tokens=int(getattr(args, "max_doc_tokens", 2048)),
+        response_pick=str(getattr(args, "response_pick", "best")),
+        explode=bool(getattr(args, "explode", False)),
+        seed=int(args.seed),
     )
     val_size = max(1, int(0.1 * len(ds_all)))
     train_size = max(1, len(ds_all) - val_size)
@@ -427,8 +527,9 @@ def train(args):
 
     system_prompt = "You are a helpful assistant that answers questions based on the given document. "
     K = max(0, int(args.prefill_layers))
+    debug_print_done = False  # print detailed feed only for epoch1/sample1
 
-    def compute_loss_on_sample(q: str, d: str, resp: str) -> torch.Tensor:
+    def compute_loss_on_sample(q: str, d: str, resp: str, debug: bool = False) -> torch.Tensor:
         # messages
         msgs = build_messages(system_prompt, d, q, include_query=True)
         ids_phase1 = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=False)  # [1, L_sys+doc]
@@ -458,15 +559,11 @@ def train(args):
         lower_layers = nn.ModuleList([full_layers[i] for i in range(0, K_eff)])
         inner.layers = lower_layers
         dc_low_in = dc_from_subset(pkv_sys, list(range(K_eff))) if K_eff > 0 else DynamicCache()
-        attn_doc_full = torch.cat([
-            torch.ones(1, L_sys, device=device, dtype=torch.long),
-            torch.ones(1, L_doc, device=device, dtype=torch.long)
-        ], dim=1)
         with torch.no_grad():
             out_low = inner(
                 input_ids=ids_phase1[:, L_sys:],
                 past_key_values=dc_low_in,
-                attention_mask=attn_doc_full,
+                attention_mask=None,
                 use_cache=True,
                 return_dict=True,
             )
@@ -502,23 +599,22 @@ def train(args):
             return torch.tensor(float('nan'), device=device)
 
         # Do NOT push header into past during training.
-        # Instead, include header (if any) or user EOT seed (Mistral style) as the first input token(s),
-        # and mask them out in labels so the first predicted target is A0.
-        hdr_tail = ids_hdr[:, L_all:]  # header-only sequence (could be multi-token; often 0 for Mistral)
+        # Instead, include header (if any) or the explicit Mistral assist-start token as the first input token(s),
+        # and mask them out so the first predicted target is A0.
+        hdr_tail = ids_hdr[:, L_all:]  # header-only sequence; with Mistral we append <Mistral_start> so len>=1
         if hdr_tail.numel() > 0:
-            seed = hdr_tail  # Llama-3 style assistant header
+            seed = hdr_tail
         else:
-            # Mistral style: use the last token of user turn as a seed
-            seed = ids_phase1[:, -1:]
+            # Fallback: explicit special token id (in case template path missed)
+            tok_id = tokenizer.convert_tokens_to_ids(MISTRAL_ASSIST_START)
+            seed = torch.tensor([[int(tok_id)]], device=device, dtype=ids_hdr.dtype) if tok_id is not None else ids_phase1[:, -1:]
         inp = torch.cat([seed, assistant_ids], dim=1)  # [seed, A0, A1, ...]
         lab = inp.clone()
         # Mask seed tokens from loss
         lab[:, :seed.size(1)] = -100
 
-        attn_mask = torch.cat([
-            torch.ones(1, pkv_get(combined, 0)[0].shape[2], device=device, dtype=torch.long),
-            torch.ones(1, inp.size(1), device=device, dtype=torch.long)
-        ], dim=1)
+        # Important: allow per-layer past length mismatch by not forcing a shared 1D mask
+        attn_mask = None
 
         # Use HF standard CLM loss (handles 1-token shift internally). Header is ignored via -100.
         def _forward_hf_loss():
@@ -531,6 +627,46 @@ def train(args):
                 return_dict=True,
             )
             return out_local.loss if out_local.loss is not None else None
+
+        # Optional detailed debug print for first sample of training
+        if debug and accelerator.is_main_process:
+            try:
+                # Render strings for visibility
+                s_no_hdr = apply_chat_template(tokenizer, msgs, add_generation_prompt=False)
+                s_with_hdr = apply_chat_template(tokenizer, msgs, add_generation_prompt=True)
+                s_full = apply_chat_template(tokenizer, msgs_ass, add_generation_prompt=False)
+                header_len = ids_hdr.size(1) - L_all
+                seed_dec = tokenizer.decode(seed[0], skip_special_tokens=False)
+                assist_dec = tokenizer.decode(assistant_ids[0][: min(256, assistant_ids.size(1))], skip_special_tokens=False)
+                print("\n===== DEBUG: First Training Sample (epoch=1, sample=1) =====")
+                print(f"Model: {getattr(model.config, 'name_or_path', None)} | Layers={n_layers} | K_eff={K_eff}")
+                print(f"Doc/Query lengths (tokens): L_sys={L_sys}, L_doc={L_doc}, header={header_len}, assist={assistant_ids.size(1)}")
+                # Token id snapshots
+                try:
+                    doc_head = min(16, L_doc)
+                    print(f"sys_only ids[:16]: {sys_only[0, :min(16, L_sys)].tolist()}")
+                    print(f"doc part ids[:16]: {ids_phase1[0, L_sys:L_sys+doc_head].tolist()}")
+                    print(f"header ids[:16]: {hdr_tail[0, :min(16, hdr_tail.size(1))].tolist() if hdr_tail.numel()>0 else []}")
+                    print(f"seed ids[:16]: {seed[0, :min(16, seed.size(1))].tolist()}")
+                    print(f"assistant ids head[:16]: {assistant_ids[0, :min(16, assistant_ids.size(1))].tolist()}")
+                except Exception:
+                    pass
+                print("-- system prompt (first 240 chars) --\n" + system_prompt[:240])
+                print("-- rendered without header (first 320 chars) --\n" + s_no_hdr[:320].replace("\n", "\\n"))
+                print("-- rendered with header (first 320 chars) --\n" + s_with_hdr[:320].replace("\n", "\\n"))
+                print("-- full target rendered (first 320 chars) --\n" + s_full[:320].replace("\n", "\\n"))
+                print(f"Seed tokens len={seed.size(1)} | decoded: {seed_dec[:160].replace('\n', ' ')}")
+                print(f"Assistant target len={assistant_ids.size(1)} | decoded head: {assist_dec.replace('\n',' ')[:240]}")
+                # Combined cache lengths per layer
+                print("-- Combined KV past lengths per layer --")
+                for li in range(n_layers):
+                    k_comb, _ = pkv_get(combined, li)
+                    print(f"layer {li:02d}: past_seq={int(k_comb.shape[2])}")
+                print("Attention mask during label loss: None (per-layer past handled internally)")
+                print(f"Label -100 count (masked seed): {int((lab == -100).sum().item())}")
+                print("==========================================================\n")
+            except Exception as e:
+                print(f"[Debug print error] {e}")
 
         loss_val = _forward_hf_loss()
         if (loss_val is None) or (not torch.isfinite(loss_val)):
@@ -591,15 +727,18 @@ def train(args):
         train_iter = dl_train
         if accelerator.is_main_process:
             train_iter = tqdm(dl_train, desc=f"Epoch {epoch} [train]", leave=False)
-        for batch in train_iter:
+        for bidx, batch in enumerate(train_iter):
             items = _iter_items(batch)
             if not items:
                 continue
             loss_accum = 0.0
             loss_vals = []
             valid_in_step = 0
-            for q, d, r in items:
-                loss_i = compute_loss_on_sample(q, d, r)
+            for iidx, (q, d, r) in enumerate(items):
+                do_debug = (epoch == 1) and (not debug_print_done) and (bidx == 0) and (iidx == 0)
+                loss_i = compute_loss_on_sample(q, d, r, debug=do_debug)
+                if do_debug:
+                    debug_print_done = True
                 # Skip NaN/Inf losses
                 if not torch.isfinite(loss_i):
                     train_nan_skipped += 1
@@ -681,24 +820,16 @@ def train(args):
                             import shutil; shutil.rmtree(p)
                     except Exception:
                         pass
-                # Save clean base backbone to base/
+                # Save current backbone (captures resized embeddings for special tokens) to base/
                 base_dir = best_dir / "base"
                 base_dir.mkdir(parents=True, exist_ok=True)
                 try:
-                    clean = AutoModelForCausalLM.from_pretrained(
-                        args.model_name,
-                        trust_remote_code=False,
-                        torch_dtype=dtype,
-                        cache_dir=args.cache_dir_model,
-                    )
-                    try:
-                        setattr(clean.config, "auto_map", None)
-                    except Exception:
-                        pass
-                    clean.save_pretrained(base_dir, safe_serialization=True)
-                    del clean
+                    inner = _get_inner_model(model)
+                    # Try not to save PEFT adapters in base/
+                    to_save = inner
+                    to_save.save_pretrained(base_dir, safe_serialization=True)
                 except Exception as e:
-                    raise RuntimeError(f"Failed saving clean base: {e}")
+                    raise RuntimeError(f"Failed saving base backbone: {e}")
                 # Save LoRA adapter if present
                 if use_lora:
                     try:

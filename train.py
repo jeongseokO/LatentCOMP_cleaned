@@ -42,6 +42,10 @@ def parse_args():
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--prefill_layers", type=int, default=0, help="Used for lopa/combined (LOPA)")
     p.add_argument("--special_tokens", type=int, default=10, help="How many Latent specials to add (lcomp/combined)")
+    # dataset controls (forwarded to lopa trainer)
+    p.add_argument("--max_doc_tokens", type=int, default=2048)
+    p.add_argument("--response_pick", type=str, choices=["first", "longest", "random", "best"], default="best")
+    p.add_argument("--explode", action="store_true")
     # phased LatentCOMP toggles
     p.add_argument("--include_query", type=str, default="True", help="lcomp: include query around specials")
     p.add_argument("--include_specials", type=str, default="True", help="lcomp: include latent specials")
@@ -106,9 +110,13 @@ def main():
             "--lr", str(args.lr),
             "--seed", str(args.seed),
             "--prefill_layers", str(max(0, int(args.prefill_layers))),
+            "--max_doc_tokens", str(int(args.max_doc_tokens)),
+            "--response_pick", str(args.response_pick),
             "--wandb_project", args.wandb_project,
             "--save_best_dir", str(best_dir),
         ]
+        if args.explode:
+            cmd += ["--explode"]
         if args.cache_dir_model: cmd += ["--cache_dir_model", args.cache_dir_model]
         if args.cache_dir_tokenizer: cmd += ["--cache_dir_tokenizer", args.cache_dir_tokenizer]
         if args.use_lora: cmd += ["--use_lora", "True"]

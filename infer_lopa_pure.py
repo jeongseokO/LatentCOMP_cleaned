@@ -14,6 +14,32 @@ from transformers.cache_utils import DynamicCache
 # Be safe with tokenizers threads when forking
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
+# Special assistant-start token for Mistral-style templates
+MISTRAL_ASSIST_START = "<Mistral_start>"
+
+def _is_mistral_template(tokenizer) -> bool:
+    tmpl = getattr(tokenizer, "chat_template", "") or ""
+    name = getattr(getattr(tokenizer, "init_kwargs", {}), "get", lambda k, d=None: d)("name_or_path", "")
+    return ("[INST]" in tmpl) or ("mistral" in str(name).lower()) or ("mistral" in tmpl.lower())
+
+def ensure_mistral_special_token(tokenizer, model=None):
+    """Ensure the custom assistant-start token exists in tokenizer (and resize model embeddings if provided)."""
+    if not _is_mistral_template(tokenizer):
+        return False
+    add_tok = []
+    cur = set(tokenizer.get_vocab().keys())
+    if MISTRAL_ASSIST_START not in cur:
+        add_tok.append(MISTRAL_ASSIST_START)
+    if add_tok:
+        tokenizer.add_special_tokens({"additional_special_tokens": tokenizer.special_tokens_map_extended.get("additional_special_tokens", []) + add_tok})
+        if model is not None:
+            try:
+                model.resize_token_embeddings(len(tokenizer))
+            except Exception:
+                pass
+        return True
+    return False
+
 
 def build_messages(system: str, document: str, question: str, include_query: bool = True):
     user = f"Document:\n{document}\n\nQuestion: {question}" if include_query else f"Document:\n{document}\n\n"
@@ -49,7 +75,17 @@ def apply_chat_template(tokenizer, messages, add_generation_prompt: bool):
 
 def tokens_from_messages(tokenizer, messages, device, add_generation_prompt=False):
     s = apply_chat_template(tokenizer, messages, add_generation_prompt)
-    return tokenizer(s, add_special_tokens=False, return_tensors="pt").input_ids.to(device)
+    ids = tokenizer(s, add_special_tokens=False, return_tensors="pt").input_ids.to(device)
+    # If Mistral template and generation prompt requested, append our assistant-start header token
+    if add_generation_prompt and _is_mistral_template(tokenizer):
+        try:
+            tok_id = tokenizer.convert_tokens_to_ids(MISTRAL_ASSIST_START)
+            if tok_id is not None and tok_id != tokenizer.unk_token_id:
+                extra = torch.tensor([[int(tok_id)]], device=ids.device, dtype=ids.dtype)
+                ids = torch.cat([ids, extra], dim=1)
+        except Exception:
+            pass
+    return ids
 
 
 def pkv_len(pkv) -> int:
@@ -140,9 +176,14 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
             pushed += 1
             last_pushed = step_tok
     else:
-        # Mistral-style: use the last token of the user turn as the seed (user EOT surrogate)
+        # Mistral-style: prefer user EOT (=eos) if present at the end of user turn; otherwise last user token
         try:
-            step_tok = ids_phase1[:, -1:]
+            eos_id = getattr(tokenizer, "eos_token_id", None)
+            last_tok = ids_phase1[:, -1:]
+            if eos_id is not None and int(last_tok.item()) == int(eos_id):
+                step_tok = last_tok  # use existing </s> without appending
+            else:
+                step_tok = last_tok
             past_len = pkv_get(combined, 0)[0].shape[2]
             attn_mask = torch.cat([torch.ones(1, past_len, device=device, dtype=torch.long),
                                    torch.ones(1, 1, device=device, dtype=torch.long)], dim=1)
@@ -251,7 +292,12 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    base = AutoModelForCausalLM.from_pretrained(args.model_name, trust_remote_code=False, torch_dtype=dtype)
+    # Prefer a saved base backbone under best_dir/base if present (captures resized embeddings)
+    base_path = best_dir / "base"
+    base_load_src = str(base_path) if base_path.exists() and any(base_path.iterdir()) else args.model_name
+    base = AutoModelForCausalLM.from_pretrained(base_load_src, trust_remote_code=False, torch_dtype=dtype)
+    # Ensure special token availability for Mistral
+    ensure_mistral_special_token(tokenizer, base)
     # attach LoRA if exists
     lora_path = best_dir / "lora"
     if lora_path.exists() and any(lora_path.iterdir()):
