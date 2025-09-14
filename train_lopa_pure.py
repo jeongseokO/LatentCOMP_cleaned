@@ -211,6 +211,13 @@ class QADataset(Dataset):
         return self.recs[idx]
 
 
+def collate_identity(batch):
+    """Return batch as-is (list of samples). Avoids default tuple-of-lists transforms
+    for mixed Python types (str, list[str]). Keeps our parsing simple and robust.
+    """
+    return batch
+
+
 def build_messages(system: str, document: str, question: str, include_query: bool = True):
     user = f"Document:\n{document}\n\nQuestion: {question}" if include_query else f"Document:\n{document}\n\n"
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
@@ -444,6 +451,7 @@ def train(args):
         pin_memory=pin_mem,
         persistent_workers=True if 4 > 0 else False,
         multiprocessing_context="forkserver",
+        collate_fn=collate_identity,
     )
     dl_val = DataLoader(
         val_set,
@@ -453,6 +461,7 @@ def train(args):
         pin_memory=pin_mem,
         persistent_workers=True if 2 > 0 else False,
         multiprocessing_context="forkserver",
+        collate_fn=collate_identity,
     )
 
     optim = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=args.lr)
@@ -838,27 +847,8 @@ def train(args):
             run = None
 
     def _iter_items(batch):
-        # Support tuple-of-lists (default collate) and list-of-tuples, in shapes:
-        # - grouped: (qid_list, q_list, d_list, responses_list)
-        # - single:  (qid_list, q_list, d_list, resp_list)
-        # - legacy:  (q_list, d_list, resp_list)
-        if isinstance(batch, (list, tuple)):
-            # If it's a tuple of equal-length lists, zip them
-            try:
-                if all(hasattr(x, '__len__') for x in batch) and len(set(len(x) for x in batch)) == 1:
-                    return list(zip(*batch))
-            except Exception:
-                pass
-            return list(batch)
-        # Fallback: single item
-        try:
-            if len(batch) == 4:
-                qid, q, d, r = batch
-                return [(qid, q, d, r)]
-            q, d, r = batch
-            return [(q, d, r)]
-        except Exception:
-            return []
+        # With collate_identity, batch is always a list of per-sample items.
+        return list(batch) if isinstance(batch, list) else [batch]
 
     global_step = 0
     for epoch in range(1, args.epochs + 1):
