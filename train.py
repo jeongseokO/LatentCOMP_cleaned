@@ -136,6 +136,18 @@ def main():
         # Run LoPA pure trainer in-process so it can leverage DDP/FSDP/DeepSpeed via Accelerate
         # Make sure the pure trainer sees the same save directory
         setattr(args, "save_best_dir", str(best_dir))
+        # Ensure LoPA-pure specific args exist when calling directly (bypassing its argparser)
+        # - lopa_modeling_path: point to our custom modeling file
+        # - attn_impl: default to a stable backend
+        # - aux/explicit flags: keep trainer defaults
+        if not hasattr(args, "lopa_modeling_path") or not args.lopa_modeling_path:
+            setattr(args, "lopa_modeling_path", str(here / "lopa_llama_modeling.py"))
+        if not hasattr(args, "attn_impl") or not args.attn_impl:
+            setattr(args, "attn_impl", "eager")
+        if not hasattr(args, "aux_prefix_loss_ratio"):
+            setattr(args, "aux_prefix_loss_ratio", 0.0)
+        if not hasattr(args, "explicit_empty_upper_cache"):
+            setattr(args, "explicit_empty_upper_cache", False)
         # Import and call the trainer
         import importlib
         lopa_mod = importlib.import_module("train_lopa_pure")

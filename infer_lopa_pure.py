@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import argparse
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import torch
 import torch.nn as nn
@@ -17,6 +17,9 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 # Special assistant-start token for Mistral-style templates
 MISTRAL_ASSIST_START = "<Mistral_start>"
 
+# -----------------------------
+# Template helpers
+# -----------------------------
 def _is_mistral_template(tokenizer) -> bool:
     tmpl = getattr(tokenizer, "chat_template", "") or ""
     name = getattr(getattr(tokenizer, "init_kwargs", {}), "get", lambda k, d=None: d)("name_or_path", "")
@@ -31,7 +34,9 @@ def ensure_mistral_special_token(tokenizer, model=None):
     if MISTRAL_ASSIST_START not in cur:
         add_tok.append(MISTRAL_ASSIST_START)
     if add_tok:
-        tokenizer.add_special_tokens({"additional_special_tokens": tokenizer.special_tokens_map_extended.get("additional_special_tokens", []) + add_tok})
+        tokenizer.add_special_tokens({
+            "additional_special_tokens": tokenizer.special_tokens_map_extended.get("additional_special_tokens", []) + add_tok
+        })
         if model is not None:
             try:
                 model.resize_token_embeddings(len(tokenizer))
@@ -40,11 +45,9 @@ def ensure_mistral_special_token(tokenizer, model=None):
         return True
     return False
 
-
 def build_messages(system: str, document: str, question: str, include_query: bool = True):
     user = f"Document:\n{document}\n\nQuestion: {question}" if include_query else f"Document:\n{document}\n\n"
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
-
 
 def apply_chat_template(tokenizer, messages, add_generation_prompt: bool):
     """Render chat with robust fallback across templates.
@@ -72,7 +75,6 @@ def apply_chat_template(tokenizer, messages, add_generation_prompt: bool):
                 s += ""
         return s
 
-
 def tokens_from_messages(tokenizer, messages, device, add_generation_prompt=False):
     s = apply_chat_template(tokenizer, messages, add_generation_prompt)
     ids = tokenizer(s, add_special_tokens=False, return_tensors="pt").input_ids.to(device)
@@ -87,12 +89,13 @@ def tokens_from_messages(tokenizer, messages, device, add_generation_prompt=Fals
             pass
     return ids
 
-
+# -----------------------------
+# DynamicCache helpers
+# -----------------------------
 def pkv_len(pkv) -> int:
     if hasattr(pkv, "layers"): return len(pkv.layers)
     if hasattr(pkv, "key_cache"): return len(pkv.key_cache)
     return len(pkv)
-
 
 def pkv_get(pkv, idx: int):
     if hasattr(pkv, "layers"):
@@ -102,14 +105,12 @@ def pkv_get(pkv, idx: int):
         return pkv.key_cache[idx], pkv.value_cache[idx]
     return pkv[idx]
 
-
 def dc_from_subset(pkv_src, idxs: List[int]) -> DynamicCache:
     dc = DynamicCache()
     for li in idxs:
         k, v = pkv_get(pkv_src, li)
         dc.update(k, v, li)
     return dc
-
 
 def _get_inner_model(m):
     """Return the decoder backbone that owns `.layers` (robust across wrappers)."""
@@ -143,7 +144,6 @@ def _get_inner_model(m):
             return child
     raise AttributeError("Could not locate inner base model with a .layers attribute")
 
-
 def _kv_meta_from_model(model_like):
     """Return (num_kv_heads, head_dim, dtype)."""
     try:
@@ -159,7 +159,6 @@ def _kv_meta_from_model(model_like):
     except Exception:
         dtype = torch.float16 if torch.cuda.is_available() else torch.float32
     return int(num_kv), int(head_dim), dtype
-
 
 def _make_empty_kv(batch: int, num_kv: int, head_dim: int, device, dtype):
     shape = (batch, num_kv, 0, head_dim)
@@ -230,41 +229,44 @@ def lopa_cache_position_patch(model, past_key_values):
             if hasattr(layer, "_lopa_past"):
                 delattr(layer, "_lopa_past")
 
+# -----------------------------
+# LoPA inference core
+# -----------------------------
 @torch.inference_mode()
-def lopa_generate(model, tokenizer, system: str, document: str, question: str, *, K: int, device: str,
-                  max_new_tokens: int = 256, min_length: int = 16, temperature: float = 0.7,
-                  top_p: float = 0.9, top_k: int | None = None, do_sample: bool = True,
-                  debug: bool = False, debug_dir: Path | None = None) -> str:
+def lopa_generate(model,
+                  tokenizer,
+                  system: str,
+                  document: str,
+                  question: str,
+                  *,
+                  K: int,
+                  device: str,
+                  max_new_tokens: int = 256,
+                  min_length: int = 16,
+                  temperature: float = 0.7,
+                  top_p: float = 0.9,
+                  top_k: Optional[int] = None,
+                  do_sample: bool = True,
+                  debug: bool = False,
+                  debug_dir: Optional[Path] = None) -> str:
     # Phase-1 ids
     msgs = build_messages(system, document, question, include_query=True)
     ids_phase1 = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=False)
     ids_hdr    = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=True)
-    sys_only   = tokens_from_messages(tokenizer, [{"role":"system","content":system}], device, add_generation_prompt=False)
+    sys_only   = tokens_from_messages(tokenizer, [{"role": "system", "content": system}], device, add_generation_prompt=False)
     L_sys, L_all = sys_only.size(1), ids_phase1.size(1)
-    L_doc = L_all - L_sys; assert L_doc > 0
+    L_doc = L_all - L_sys
+    assert L_doc > 0, "Document tokens must be > 0"
 
     if debug:
         try:
-            # Render strings for full visibility
-            from pathlib import Path as _P
             s_no_hdr = apply_chat_template(tokenizer, msgs, add_generation_prompt=False)
             s_with_hdr = apply_chat_template(tokenizer, msgs, add_generation_prompt=True)
-            s_full = apply_chat_template(tokenizer, msgs + [{"role":"assistant","content":"<debug>"}], add_generation_prompt=False)
-            print(f"[debug] render lengths (chars): no_hdr={len(s_no_hdr)}, with_hdr={len(s_with_hdr)}, full={len(s_full)}")
-            def _print_chunked(label: str, text: str, chunk: int = 4000):
-                print(f"-- {label} --")
-                for i in range(0, len(text), chunk):
-                    print(text[i:i+chunk])
-            _print_chunked("rendered without header (full)", s_no_hdr)
-            _print_chunked("rendered with header (full)", s_with_hdr)
-            _print_chunked("full target rendered skeleton (full)", s_full)
-            # Optional file dump
+            print(f"[debug] render lengths (chars): no_hdr={len(s_no_hdr)}, with_hdr={len(s_with_hdr)}")
             if debug_dir is not None:
                 debug_dir.mkdir(parents=True, exist_ok=True)
                 (debug_dir / "infer_render_no_header.txt").write_text(s_no_hdr, encoding="utf-8")
                 (debug_dir / "infer_render_with_header.txt").write_text(s_with_hdr, encoding="utf-8")
-                (debug_dir / "infer_full_skeleton.txt").write_text(s_full, encoding="utf-8")
-                print(f"[debug] wrote renders to {debug_dir}")
         except Exception as e:
             print(f"[debug] render dump failed: {e}")
 
@@ -279,9 +281,9 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
     pkv_sys_low = out_sys_low.past_key_values
 
     # 2) lower-K doc pass
-    dc_low_in = dc_from_subset(pkv_sys_low, list(range(K_eff))) if K_eff>0 else DynamicCache()
-    out_low = inner(input_ids=ids_phase1[:, L_sys:], past_key_values=dc_low_in, attention_mask=None,
-                    use_cache=True, return_dict=True)
+    dc_low_in = dc_from_subset(pkv_sys_low, list(range(K_eff))) if K_eff > 0 else DynamicCache()
+    out_low = inner(input_ids=ids_phase1[:, L_sys:], past_key_values=dc_low_in,
+                    attention_mask=None, use_cache=True, return_dict=True)
     pkv_low = out_low.past_key_values
     inner.layers = full_layers
 
@@ -290,29 +292,26 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
     num_kv, head_dim, kv_dtype = _kv_meta_from_model(model)
     for li in range(n_layers):
         if li < K_eff:
-            k_cat = torch.cat([pkv_get(pkv_sys_low, li)[0][:, :, :L_sys, :],
-                               pkv_get(pkv_low, li)[0][:, :, -L_doc:, :]], dim=2)
-            v_cat = torch.cat([pkv_get(pkv_sys_low, li)[1][:, :, :L_sys, :],
-                               pkv_get(pkv_low, li)[1][:, :, -L_doc:, :]], dim=2)
+            k_sys, v_sys = pkv_get(pkv_sys_low, li)
+            k_low, v_low = pkv_get(pkv_low, li)
+            k_cat = torch.cat([k_sys[:, :, :L_sys, :], k_low[:, :, -L_doc:, :]], dim=2)
+            v_cat = torch.cat([v_sys[:, :, :L_sys, :], v_low[:, :, -L_doc:, :]], dim=2)
         else:
             k_cat, v_cat = _make_empty_kv(1, num_kv, head_dim, device, kv_dtype)
         combined.update(k_cat.contiguous(), v_cat.contiguous(), li)
 
     if debug:
-        lower_l = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(0, K_eff)}) if K_eff>0 else []
-        upper_l = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(K_eff, n_layers)}) if K_eff<n_layers else []
+        lower_l = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(0, K_eff)}) if K_eff > 0 else []
+        upper_l = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(K_eff, n_layers)}) if K_eff < n_layers else []
         print(f"[debug] L_sys={L_sys}, L_doc={L_doc}, K={K_eff} | lower_lens={lower_l} | upper_lens={upper_l}")
 
-    # 4) header push step-by-step (seed upper layers).
-    #    If no header exists (common for Mistral templates), push the user's end-of-turn token
-    #    i.e., the last token of the user prompt sequence (ids_phase1[:, -1:]).
+    # 4) header push (seed) — push token-by-token with per-layer position patch
     hdr_tail = ids_hdr[:, L_all:]
     pushed = 0
     last_pushed = None
     if hdr_tail.numel() > 0:
         for j in range(hdr_tail.size(1)):
             step_tok = hdr_tail[:, j:j+1]
-            # Adjust per-layer positions while upper layers are shorter
             with lopa_cache_position_patch(model, combined):
                 out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=None,
                                  use_cache=True, return_dict=True)
@@ -320,37 +319,25 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
             pushed += 1
             last_pushed = step_tok
     else:
-        # Mistral-style: prefer user EOT (=eos) if present at the end of user turn; otherwise last user token
-        try:
-            eos_id = getattr(tokenizer, "eos_token_id", None)
-            last_tok = ids_phase1[:, -1:]
-            if eos_id is not None and int(last_tok.item()) == int(eos_id):
-                step_tok = last_tok  # use existing </s> without appending
-            else:
-                step_tok = last_tok
-            with lopa_cache_position_patch(model, combined):
-                out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=None,
-                                 use_cache=True, return_dict=True)
-            combined = out_seed.past_key_values
-            pushed += 1
-            last_pushed = step_tok
-        except Exception:
-            pass
+        # Mistral-style: fallback to the last user token (often </s>)
+        step_tok = ids_phase1[:, -1:]
+        with lopa_cache_position_patch(model, combined):
+            out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=None,
+                             use_cache=True, return_dict=True)
+        combined = out_seed.past_key_values
+        pushed += 1
+        last_pushed = step_tok
+
     if debug:
-        try:
-            lower_l2 = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(0, K_eff)}) if K_eff>0 else []
-            upper_l2 = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(K_eff, n_layers)}) if K_eff<n_layers else []
-            seed_dec = tokenizer.decode(last_pushed[0], skip_special_tokens=False) if last_pushed is not None else "<none>"
-            print(f"[debug] after header/seed push: pushed={pushed} | seed_dec='{seed_dec}' | lower_lens={lower_l2} | upper_lens={upper_l2}")
-            if debug_dir is not None and last_pushed is not None:
-                (debug_dir / "infer_seed_tokens.txt").write_text(seed_dec, encoding="utf-8")
-        except Exception:
-            pass
+        lower_l2 = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(0, K_eff)}) if K_eff > 0 else []
+        upper_l2 = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(K_eff, n_layers)}) if K_eff < n_layers else []
+        seed_dec = tokenizer.decode(last_pushed[0], skip_special_tokens=False) if last_pushed is not None else "<none>"
+        print(f"[debug] after header push: pushed={pushed} | seed_dec='{seed_dec}' | lower_lens={lower_l2} | upper_lens={upper_l2}")
 
     # 5) decoding
     from transformers.generation import LogitsProcessorList
     from transformers.generation.logits_process import TemperatureLogitsWarper, TopPLogitsWarper, TopKLogitsWarper
-    # Treat both eos and eot as stopping tokens
+
     eos_id = tokenizer.eos_token_id
     try:
         eot_id = tokenizer.convert_tokens_to_ids("<|eot_id|>")
@@ -359,11 +346,7 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
     stop_ids = set()
     if eos_id is not None: stop_ids.add(int(eos_id))
     if eot_id is not None and eot_id != tokenizer.unk_token_id: stop_ids.add(int(eot_id))
-    if debug:
-        print(f"[debug] stop_ids={sorted(list(stop_ids))} | min_length={min_length} | do_sample={do_sample} | temp={temperature} | top_p={top_p} | top_k={top_k}")
-    # Start token for decoding: if we pushed header/seed, use the last token we just pushed; otherwise use last of hdr
-    last = last_pushed if pushed > 0 else ids_hdr[:, -1:]
-    generated = torch.empty((1,0), dtype=torch.long, device=device)
+
     procs = None
     if do_sample:
         procs = LogitsProcessorList()
@@ -373,41 +356,56 @@ def lopa_generate(model, tokenizer, system: str, document: str, question: str, *
             procs.append(TopPLogitsWarper(top_p=float(top_p), min_tokens_to_keep=1))
         if top_k is not None and top_k > 0:
             procs.append(TopKLogitsWarper(top_k=int(top_k), filter_value=-float("inf")))
+
+    device_t = device
+    last = last_pushed if pushed > 0 else ids_hdr[:, -1:]
+    generated = torch.empty((1, 0), dtype=torch.long, device=device_t)
     cur = 0
     stop_reason = None
+
     while cur < max_new_tokens:
-        # During decoding, upper layers remain shorter than lower ones; patch positions each step.
         with lopa_cache_position_patch(model, combined):
             out = model(input_ids=last, past_key_values=combined, attention_mask=None, use_cache=True, return_dict=True)
         combined = out.past_key_values
         logits = out.logits[:, -1, :].to(torch.float32)
+
+        # force min_length
         if stop_ids and cur < min_length:
             for sid in stop_ids:
                 logits[:, sid] = -float("inf")
-        inp = generated if generated.numel()>0 else last.new_zeros((1,0), dtype=torch.long, device=device)
+
         if procs is not None:
-            logits = procs(inp, logits)
+            inp_for_proc = generated if generated.numel() > 0 else last.new_zeros((1, 0), dtype=torch.long, device=device_t)
+            logits = procs(inp_for_proc, logits)
+
         if do_sample:
             probs = torch.softmax(logits, dim=-1)
             next_tok = torch.multinomial(probs, num_samples=1)
         else:
             next_tok = torch.argmax(logits, dim=-1, keepdim=True)
+
         if int(next_tok.item()) in stop_ids:
             stop_reason = f"stop_token:{int(next_tok.item())}"
             break
+
         generated = torch.cat([generated, next_tok], dim=1)
         last = next_tok
         cur += 1
+
     if stop_reason is None and cur >= max_new_tokens:
         stop_reason = "max_new_tokens"
+
     text = tokenizer.decode(generated[0], skip_special_tokens=True)
     if debug:
-        print(f"[debug] generation finished | tokens={generated.size(1)} | reason={stop_reason}")
+        print(f"[debug] finished | tokens={generated.size(1)} | reason={stop_reason}")
         if debug_dir is not None:
+            debug_dir.mkdir(parents=True, exist_ok=True)
             (debug_dir / "infer_generated.txt").write_text(text, encoding="utf-8")
     return text
 
-
+# -----------------------------
+# CLI
+# -----------------------------
 def main():
     ap = argparse.ArgumentParser("LoPA-only inference helper")
     ap.add_argument("--best_dir", type=str, required=True, help="Path to best/ folder produced by training")
@@ -437,7 +435,7 @@ def main():
     elif args.dtype == "fp16":
         dtype = torch.float16
     else:
-        dtype = torch.bfloat16 if (device=="cuda" and torch.cuda.is_bf16_supported()) else (torch.float16 if device=="cuda" else torch.float32)
+        dtype = torch.bfloat16 if (device == "cuda" and torch.cuda.is_bf16_supported()) else (torch.float16 if device == "cuda" else torch.float32)
 
     # global numeric toggles
     if args.no_tf32 and torch.cuda.is_available():
@@ -467,25 +465,37 @@ def main():
     base = AutoModelForCausalLM.from_pretrained(base_load_src, trust_remote_code=False, torch_dtype=dtype)
     # Ensure special token availability for Mistral
     ensure_mistral_special_token(tokenizer, base)
+
     # attach LoRA if exists
     lora_path = best_dir / "lora"
+    model = None
     merged_lora = False
     if lora_path.exists() and any(lora_path.iterdir()):
         try:
             from peft import PeftModel
             peft = PeftModel.from_pretrained(base, str(lora_path))
-            model = peft.merge_and_unload().to(device).eval()
-            merged_lora = True
+            try:
+                model = peft.merge_and_unload()
+                merged_lora = True
+            except Exception:
+                # fallback: keep PEFT wrapper without merge
+                model = peft
         except Exception:
-            model = base.to(device).eval()
+            model = base
     else:
-        model = base.to(device).eval()
+        model = base
+
+    # device & eval
+    model = model.to(device).eval()
+
     # Force eager attention for all models (stability)
     impl = "eager"
     for k in ("attn_implementation", "_attn_implementation"):
         try:
             setattr(model.config, k, impl)
-            setattr(model.model.config, k, impl)
+            inner = getattr(model, "model", None) or getattr(model, "transformer", None)
+            if inner is not None and hasattr(inner, "config"):
+                setattr(inner.config, k, impl)
         except Exception:
             pass
     print("[infer] Forcing attn_implementation='eager' for all models (stability mode).")
@@ -506,7 +516,6 @@ def main():
         do_sample=bool(args.do_sample), debug=bool(args.debug), debug_dir=dbg_dir,
     )
     print(text)
-
 
 if __name__ == "__main__":
     main()
