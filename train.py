@@ -148,6 +148,13 @@ def main():
             setattr(args, "aux_prefix_loss_ratio", 0.0)
         if not hasattr(args, "explicit_empty_upper_cache"):
             setattr(args, "explicit_empty_upper_cache", False)
+        # LoRA hyperparams expected by pure trainer
+        if not hasattr(args, "lora_r"):
+            setattr(args, "lora_r", 4)
+        if not hasattr(args, "lora_alpha"):
+            setattr(args, "lora_alpha", 8)
+        if not hasattr(args, "lora_dropout"):
+            setattr(args, "lora_dropout", 0.05)
         # Import and call the trainer
         import importlib
         lopa_mod = importlib.import_module("train_lopa_pure")
