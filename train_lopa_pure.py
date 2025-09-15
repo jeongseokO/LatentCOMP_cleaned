@@ -15,6 +15,8 @@ import os
 import random
 from pathlib import Path
 from typing import List, Optional, Tuple
+from types import SimpleNamespace
+import contextlib
 
 import torch
 import torch.nn as nn
@@ -31,6 +33,7 @@ except Exception:
 
 # ↓ transformers는 토크나이저/헬퍼만 가져옵니다. 모델은 아래 load_custom_llama_modeling()로 교체 로드
 from transformers import AutoTokenizer, get_cosine_schedule_with_warmup
+from transformers.cache_utils import DynamicCache
 
 from huggingface_hub import create_repo, upload_folder
 
@@ -212,8 +215,45 @@ def set_seed(seed: int):
     random.seed(seed); torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
 
 def _get_inner_model(m):
-    if hasattr(m, "module"): m = m.module
+    if hasattr(m, "module"):
+        m = m.module
     return m
+
+def _get_layers_owner(m: nn.Module) -> nn.Module:
+    """Robustly find the decoder backbone that owns `.layers`.
+
+    Works across PEFT/Accelerate wrappers and model variants.
+    """
+    # unwrap Accelerate/DDP first
+    m = _get_inner_model(m)
+    # unwrap PEFT
+    try:
+        from peft import PeftModel
+        if isinstance(m, PeftModel):
+            try:
+                m = m.get_base_model()
+            except Exception:
+                m = getattr(m, "base_model", m)
+    except Exception:
+        pass
+    # direct children commonly used
+    for attr in ("model", "transformer", "backbone", "base_model", "language_model"):
+        if hasattr(m, attr):
+            cand = getattr(m, attr)
+            if hasattr(cand, "layers") and isinstance(getattr(cand, "layers", None), nn.ModuleList):
+                return cand
+            if hasattr(cand, "decoder") and hasattr(cand.decoder, "layers") and isinstance(cand.decoder.layers, nn.ModuleList):
+                return cand.decoder
+    # self
+    if hasattr(m, "layers") and isinstance(getattr(m, "layers", None), nn.ModuleList):
+        return m
+    # search any child
+    for child in m.modules():
+        if child is m:
+            continue
+        if hasattr(child, "layers") and isinstance(getattr(child, "layers", None), nn.ModuleList):
+            return child
+    raise AttributeError("Could not locate inner base model with a .layers attribute")
 
 def _build_accelerator(args) -> Accelerator:
     if args.dtype == "bf16": mp = "bf16"
@@ -295,6 +335,18 @@ def train(args):
     if accelerator.is_main_process:
         print(f"[Info] attn_implementation = {impl}")
 
+    # Enforce custom LoPA modeling availability (must be present)
+    try:
+        has_prefill = hasattr(_get_inner_model(model).model, "lopa_prefill_lower_k")
+    except Exception:
+        has_prefill = False
+    has_step = hasattr(model, "lopa_step_logits")
+    if not (has_prefill and has_step):
+        raise RuntimeError(
+            "Custom LoPA modeling not active. Ensure lopa_llama_modeling.py is loaded and bound. "
+            "Check --lopa_modeling_path and that no other import preloads transformers.models.llama.modeling_llama."
+        )
+
     # LoRA (optional)
     use_lora = str(args.use_lora).lower() in ("1","true","yes","y")
     if use_lora:
@@ -350,6 +402,134 @@ def train(args):
     aux_ratio = float(args.aux_prefix_loss_ratio or 0.0)
 
     # ---- helpers inside train() ----
+    def _kv_meta_from_model(model_like):
+        try:
+            cfg = getattr(model_like, "config", None) or getattr(_get_inner_model(model_like), "config", None)
+        except Exception:
+            cfg = getattr(_get_inner_model(model_like), "config", None)
+        num_heads = getattr(cfg, "num_attention_heads", None)
+        num_kv = getattr(cfg, "num_key_value_heads", None) or num_heads
+        hidden = getattr(cfg, "hidden_size", None)
+        head_dim = (hidden // num_heads) if (hidden and num_heads) else None
+        try:
+            dtype = next(_get_inner_model(model_like).parameters()).dtype
+        except Exception:
+            dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+        return int(num_kv), int(head_dim), dtype
+
+    def _make_empty_kv(batch: int, num_kv: int, head_dim: int, device, dtype):
+        shape = (batch, num_kv, 0, head_dim)
+        k = torch.empty(shape, device=device, dtype=dtype)
+        v = torch.empty(shape, device=device, dtype=dtype)
+        return k.contiguous(), v.contiguous()
+
+    def _pkv_get(pkv, idx: int):
+        if hasattr(pkv, "layers"):
+            layer = pkv.layers[idx]
+            return layer.keys, layer.values
+        if hasattr(pkv, "key_cache"):
+            return pkv.key_cache[idx], pkv.value_cache[idx]
+        return pkv[idx]
+
+    @contextlib.contextmanager
+    def lopa_cache_position_patch(model_obj, past_key_values):
+        """
+        Align per-layer cache positions when lower layers have prefill past and upper layers are empty.
+        Mirrors the inference-time patch.
+        """
+        inner = _get_layers_owner(model_obj)
+
+        def _pkv_past_len(li: int) -> int:
+            if hasattr(past_key_values, "key_cache") and hasattr(past_key_values, "value_cache"):
+                return int(past_key_values.key_cache[li].shape[2])
+            if hasattr(past_key_values, "layers"):
+                return int(past_key_values.layers[li].keys.shape[2])
+            return int(past_key_values[li][0].shape[2])
+
+        n_layers = len(inner.layers)
+        past_lens = [_pkv_past_len(li) for li in range(n_layers)]
+
+        handles = []
+        for li, layer in enumerate(inner.layers):
+            layer._lopa_past = int(past_lens[li])
+
+            def _pre_hook(module, args, kwargs):
+                past_len = getattr(module, "_lopa_past", 0)
+                cp = kwargs.get("cache_position", None)
+                pi = kwargs.get("position_ids", None)
+                start_val = None
+                if isinstance(cp, torch.Tensor) and cp.numel() > 0:
+                    start_val = int(cp.view(-1)[0].item())
+                elif isinstance(pi, torch.Tensor) and pi.numel() > 0:
+                    start_val = int(pi.view(-1)[0].item())
+                if start_val is not None:
+                    off = start_val - past_len
+                    if off != 0:
+                        if isinstance(cp, torch.Tensor):
+                            kwargs["cache_position"] = cp - off
+                        if isinstance(pi, torch.Tensor):
+                            kwargs["position_ids"] = pi - off
+                return args, kwargs
+
+            h = layer.register_forward_pre_hook(_pre_hook, with_kwargs=True)
+            handles.append(h)
+
+        try:
+            yield
+        finally:
+            for h in handles:
+                h.remove()
+            for layer in inner.layers:
+                if hasattr(layer, "_lopa_past"):
+                    delattr(layer, "_lopa_past")
+
+    def _lopa_prefill_lower_k_fallback(input_ids: torch.LongTensor, lower_k: int):
+        """Run only lower-K layers and return a SimpleNamespace with .past_key_values (DynamicCache)."""
+        inner = _get_layers_owner(model)
+        full_layers = inner.layers
+        K_eff = max(0, min(int(lower_k), len(full_layers)))
+        lower_layers = nn.ModuleList([full_layers[i] for i in range(K_eff)])
+        inner.layers = lower_layers
+        try:
+            out = inner(input_ids=input_ids, attention_mask=torch.ones_like(input_ids), use_cache=True, return_dict=True)
+            pkv = out.past_key_values
+        finally:
+            inner.layers = full_layers
+        return SimpleNamespace(past_key_values=pkv)
+
+    def _lopa_build_combined_cache_fallback(lower_cache: DynamicCache, lower_k: int, batch_size: int, device):
+        dc = DynamicCache()
+        num_kv, head_dim, kv_dtype = _kv_meta_from_model(model)
+        n_layers = len(_get_layers_owner(model).layers)
+        for li in range(n_layers):
+            if li < int(lower_k):
+                k, v = _pkv_get(lower_cache, li)
+                dc.update(k, v, li)
+            else:
+                k_e, v_e = _make_empty_kv(batch_size, num_kv, head_dim, device, kv_dtype)
+                dc.update(k_e, v_e, li)
+        return dc
+
+    def _lopa_step_logits_fallback(inp: torch.LongTensor, prefix_len: int, past_key_values: DynamicCache,
+                                   attention_mask_total_len: Optional[int], labels: Optional[torch.LongTensor]):
+        # Run forward with per-layer position alignment; rely on HF loss if labels given
+        with lopa_cache_position_patch(model, past_key_values):
+            out = model(input_ids=inp, past_key_values=past_key_values, attention_mask=None,
+                        use_cache=True, return_dict=True, labels=labels)
+        return out
+
+    # detect availability of custom LoPA API
+    try:
+        _has_lopa_prefill = hasattr(_get_inner_model(model).model, "lopa_prefill_lower_k")
+    except Exception:
+        _has_lopa_prefill = False
+    try:
+        _has_lopa_step = hasattr(model, "lopa_step_logits")
+    except Exception:
+        _has_lopa_step = False
+    if accelerator.is_main_process:
+        print(f"[LoPA-API] prefill={_has_lopa_prefill} | step_logits={_has_lopa_step}")
+
     def compute_loss_on_sample(q: str, d: str, resp: str, debug: bool = False) -> torch.Tensor:
         msgs = build_messages(system_prompt, d, q, include_query=True)
         ids_phase1 = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=False)  # [sys+user]
@@ -357,17 +537,32 @@ def train(args):
 
         # Phase-1: Lower-K prefill (absolute positions enforced internally)
         with torch.no_grad():
-            pref_out = getattr(_get_inner_model(model).model, "lopa_prefill_lower_k")(
-                input_ids=ids_phase1, lower_k=K, use_cache=True
-            )
+            try:
+                if _has_lopa_prefill:
+                    pref_out = getattr(_get_inner_model(model).model, "lopa_prefill_lower_k")(
+                        input_ids=ids_phase1, lower_k=K, use_cache=True
+                    )
+                else:
+                    if accelerator.is_main_process and debug:
+                        print("[LoPA-fallback] using trainer fallback for prefill")
+                    pref_out = _lopa_prefill_lower_k_fallback(ids_phase1, K)
+            except Exception:
+                # final guard: fallback
+                pref_out = _lopa_prefill_lower_k_fallback(ids_phase1, K)
         lower_cache = pref_out.past_key_values
         L_all = lower_cache.get_seq_length()  # == ids_phase1.size(1)
 
         # (Optional) explicit empty upper cache
         if bool(args.explicit_empty_upper_cache):
-            combined = getattr(_get_inner_model(model).model, "lopa_build_combined_cache")(
-                lower_cache, lower_k=K, batch_size=ids_phase1.size(0), device=ids_phase1.device
-            )
+            try:
+                if _has_lopa_prefill:
+                    combined = getattr(_get_inner_model(model).model, "lopa_build_combined_cache")(
+                        lower_cache, lower_k=K, batch_size=ids_phase1.size(0), device=ids_phase1.device
+                    )
+                else:
+                    combined = _lopa_build_combined_cache_fallback(lower_cache, K, ids_phase1.size(0), ids_phase1.device)
+            except Exception:
+                combined = _lopa_build_combined_cache_fallback(lower_cache, K, ids_phase1.size(0), ids_phase1.device)
         else:
             combined = lower_cache
 
@@ -388,14 +583,19 @@ def train(args):
         T = inp.size(1)
 
         # Main generation CE (absolute positions handled in lopa_step_logits)
-        out = getattr(model, "lopa_step_logits")(
-            input_ids=inp,
-            prefix_len=L_all,
-            past_key_values=combined,
-            attention_mask_total_len=L_all + T,
-            logits_to_keep=T,
-            labels=labels,
-        )
+        if _has_lopa_step:
+            out = getattr(model, "lopa_step_logits")(
+                input_ids=inp,
+                prefix_len=L_all,
+                past_key_values=combined,
+                attention_mask_total_len=L_all + T,
+                logits_to_keep=T,
+                labels=labels,
+            )
+        else:
+            if accelerator.is_main_process and debug:
+                print("[LoPA-fallback] using trainer fallback for step logits")
+            out = _lopa_step_logits_fallback(inp, L_all, combined, L_all + T, labels)
         loss = out.loss if out.loss is not None else torch.zeros((), device=device, dtype=torch.float32)
 
         # (Optional) auxiliary prefix loss on lower-K-only to strengthen System/Doc/User representation
@@ -428,16 +628,28 @@ def train(args):
         ids_hdr    = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=True)
 
         with torch.no_grad():
-            pref_out = getattr(_get_inner_model(model).model, "lopa_prefill_lower_k")(
-                input_ids=ids_phase1, lower_k=K, use_cache=True
-            )
+            try:
+                if _has_lopa_prefill:
+                    pref_out = getattr(_get_inner_model(model).model, "lopa_prefill_lower_k")(
+                        input_ids=ids_phase1, lower_k=K, use_cache=True
+                    )
+                else:
+                    pref_out = _lopa_prefill_lower_k_fallback(ids_phase1, K)
+            except Exception:
+                pref_out = _lopa_prefill_lower_k_fallback(ids_phase1, K)
         lower_cache = pref_out.past_key_values
         L_all = lower_cache.get_seq_length()
 
         if bool(args.explicit_empty_upper_cache):
-            combined = getattr(_get_inner_model(model).model, "lopa_build_combined_cache")(
-                lower_cache, lower_k=K, batch_size=ids_phase1.size(0), device=ids_phase1.device
-            )
+            try:
+                if _has_lopa_prefill:
+                    combined = getattr(_get_inner_model(model).model, "lopa_build_combined_cache")(
+                        lower_cache, lower_k=K, batch_size=ids_phase1.size(0), device=ids_phase1.device
+                    )
+                else:
+                    combined = _lopa_build_combined_cache_fallback(lower_cache, K, ids_phase1.size(0), ids_phase1.device)
+            except Exception:
+                combined = _lopa_build_combined_cache_fallback(lower_cache, K, ids_phase1.size(0), ids_phase1.device)
         else:
             combined = lower_cache
 
@@ -458,14 +670,17 @@ def train(args):
             labels = inp.clone(); labels[:, :seed.size(1)] = -100
             T = inp.size(1)
 
-            out = getattr(model, "lopa_step_logits")(
-                input_ids=inp,
-                prefix_len=L_all,
-                past_key_values=combined,
-                attention_mask_total_len=L_all + T,
-                logits_to_keep=T,
-                labels=labels,
-            )
+            if _has_lopa_step:
+                out = getattr(model, "lopa_step_logits")(
+                    input_ids=inp,
+                    prefix_len=L_all,
+                    past_key_values=combined,
+                    attention_mask_total_len=L_all + T,
+                    logits_to_keep=T,
+                    labels=labels,
+                )
+            else:
+                out = _lopa_step_logits_fallback(inp, L_all, combined, L_all + T, labels)
             if out.loss is not None and torch.isfinite(out.loss):
                 losses.append(out.loss)
         if not losses:
