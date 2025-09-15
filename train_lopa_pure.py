@@ -112,6 +112,10 @@ def build_argparser():
     p.add_argument("--no_explode", dest="explode", action="store_false")
     p.add_argument("--group_by_question", action="store_true", default=True)
     p.add_argument("--no_group_by_question", dest="group_by_question", action="store_false")
+    # responses handling
+    p.add_argument("--sequential_responses", action="store_true", default=True,
+                   help="Process multiple responses sequentially with separate backward calls")
+    p.add_argument("--no_sequential_responses", dest="sequential_responses", action="store_false")
     # IO
     p.add_argument("--save_best_dir", type=str, default="./_best_ckpt")
     p.add_argument("--cache_dir_model", type=str, default=None)
@@ -122,8 +126,8 @@ def build_argparser():
     p.add_argument("--push_to_hub", action="store_true")
     p.add_argument("--private_repo", action="store_true")
     # distributed
-    p.add_argument("--dist_mode", type=str, choices=["ddp", "fsdp", "deepspeed"], default="ddp")
-    p.add_argument("--zero_stage", type=int, default=2)
+    p.add_argument("--dist_mode", type=str, choices=["ddp", "fsdp", "deepspeed"], default="deepspeed")
+    p.add_argument("--zero_stage", type=int, default=3)
     # extras
     p.add_argument("--aux_prefix_loss_ratio", type=float, default=0.0,
                    help="Optional lower-K-only prefix CE loss weight (0.02~0.1 추천). 0이면 사용 안함.")
@@ -400,6 +404,7 @@ def train(args):
     system_prompt = "You are a helpful assistant that answers questions based on the given document. "
     K = max(0, int(args.prefill_layers))
     aux_ratio = float(args.aux_prefix_loss_ratio or 0.0)
+    printed_debug_first = False  # one-time verbose dump for first epoch/batch
 
     # ---- helpers inside train() ----
     def _kv_meta_from_model(model_like):
@@ -622,7 +627,8 @@ def train(args):
 
         return loss
 
-    def compute_loss_on_group(qid: str, q: str, d: str, responses: List[str], debug: bool = False) -> torch.Tensor:
+    def compute_loss_on_group(qid: str, q: str, d: str, responses: List[str], debug: bool = False,
+                              sequential: bool = True):
         msgs = build_messages(system_prompt, d, q, include_query=True)
         ids_phase1 = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=False)
         ids_hdr    = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=True)
@@ -654,7 +660,8 @@ def train(args):
             combined = lower_cache
 
         losses = []
-        for resp in responses:
+        nonlocal printed_debug_first
+        for idx_resp, resp in enumerate(responses):
             if not isinstance(resp, str) or not resp.strip():
                 continue
             msgs_ass = msgs + [{"role": "assistant", "content": resp}]
@@ -683,9 +690,44 @@ def train(args):
                 out = _lopa_step_logits_fallback(inp, L_all, combined, L_all + T, labels)
             if out.loss is not None and torch.isfinite(out.loss):
                 losses.append(out.loss)
+
+            # One-time detailed debug for the very first (epoch==1,batch==0, resp idx==0)
+            if debug and (not printed_debug_first) and idx_resp == 0 and accelerator.is_main_process:
+                try:
+                    seed_len = int(seed.size(1))
+                    assist_len = int(assistant_ids.size(1))
+                    print("===[DEBUG: first-sample response #0]===")
+                    # Rendered strings
+                    try:
+                        s_no_hdr = apply_chat_template(tokenizer, msgs, add_generation_prompt=False)
+                        s_with_hdr = apply_chat_template(tokenizer, msgs, add_generation_prompt=True)
+                        print(f"render no_header chars={len(s_no_hdr)} | with_header chars={len(s_with_hdr)}")
+                    except Exception:
+                        pass
+                    # Lengths and masking
+                    print(f"L_all(prefill)={L_all} | seed_len={seed_len} | assistant_len={assist_len} | total_T={T}")
+                    print(f"labels -100 range: [0 : {seed_len-1}] inclusive")
+                    # Show small slices of ids
+                    def _to_list(x):
+                        return [int(t) for t in x.view(-1).tolist()]
+                    sl = min(64, T)
+                    print(f"inp[:{sl}] ids=", _to_list(inp[0, :sl]))
+                    print(f"labels[:{sl}] =", _to_list(labels[0, :sl]))
+                    # Decode boundaries
+                    try:
+                        dec_seed = tokenizer.decode(seed[0], skip_special_tokens=False)
+                        dec_ass = tokenizer.decode(assistant_ids[0, :min(128, assist_len)], skip_special_tokens=False)
+                        print("seed(text)=", repr(dec_seed))
+                        print("assistant(text head)=", repr(dec_ass))
+                    except Exception:
+                        pass
+                    print("=== [END DEBUG] ===")
+                except Exception as e:
+                    print(f"[debug] dump failed: {e}")
+                printed_debug_first = True
         if not losses:
-            return torch.tensor(float('nan'), device=device)
-        return torch.stack(losses, dim=0).mean()
+            return torch.tensor(float('nan'), device=device) if not sequential else []
+        return losses if sequential else torch.stack(losses, dim=0).mean()
 
     # wandb
     run = None
@@ -716,7 +758,11 @@ def train(args):
                 try:
                     if len(it) == 4 and isinstance(it[3], list):
                         qid, q, d, rs = it
-                        loss_i = compute_loss_on_group(str(qid), q, d, rs, debug=(epoch==1 and bidx==0))
+                        loss_i = compute_loss_on_group(
+                            str(qid), q, d, rs,
+                            debug=(epoch==1 and bidx==0),
+                            sequential=bool(args.sequential_responses)
+                        )
                     elif len(it) == 4:
                         qid, q, d, r = it
                         loss_i = compute_loss_on_sample(q, d, r, debug=(epoch==1 and bidx==0))
@@ -727,12 +773,24 @@ def train(args):
                     print(f"[Warn] skip item: {e}")
                     continue
 
-                if not torch.isfinite(loss_i):
-                    skipped_train += 1; continue
-
-                accelerator.backward(loss_i / max(1, args.batch_size))
-                step_losses.append(float(loss_i.detach().item()))
-                valid += 1
+                # Handle sequential list of losses (per response) or a single loss
+                if isinstance(loss_i, list):
+                    if not loss_i:
+                        skipped_train += 1
+                        continue
+                    for li in loss_i:
+                        if not torch.isfinite(li):
+                            skipped_train += 1
+                            continue
+                        accelerator.backward(li / max(1, args.batch_size))
+                        step_losses.append(float(li.detach().item()))
+                        valid += 1
+                else:
+                    if not torch.isfinite(loss_i):
+                        skipped_train += 1; continue
+                    accelerator.backward(loss_i / max(1, args.batch_size))
+                    step_losses.append(float(loss_i.detach().item()))
+                    valid += 1
 
             if valid > 0:
                 if float(args.grad_clip) and args.grad_clip > 0:
@@ -766,7 +824,7 @@ def train(args):
                     try:
                         if len(it) == 4 and isinstance(it[3], list):
                             qid, q, d, rs = it
-                            loss_i = compute_loss_on_group(str(qid), q, d, rs, debug=False)
+                            loss_i = compute_loss_on_group(str(qid), q, d, rs, debug=False, sequential=False)
                         elif len(it) == 4:
                             qid, q, d, r = it
                             loss_i = compute_loss_on_sample(q, d, r, debug=False)

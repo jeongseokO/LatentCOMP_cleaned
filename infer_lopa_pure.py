@@ -18,6 +18,33 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 MISTRAL_ASSIST_START = "<Mistral_start>"
 
 # -----------------------------
+# Custom modeling loader (Llama)
+# -----------------------------
+def load_custom_llama_modeling(modeling_path: str):
+    """Load local lopa_llama_modeling.py and register it as
+    transformers.models.llama.modeling_llama so Auto classes pick it up.
+    Returns the imported module.
+    """
+    import importlib.util, sys
+    import transformers
+    import transformers.models.llama  # ensure package exists
+    target_name = "transformers.models.llama.modeling_llama"
+    # Drop already-imported module to override
+    if target_name in sys.modules:
+        del sys.modules[target_name]
+    spec = importlib.util.spec_from_file_location(target_name, str(modeling_path))
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Failed to load spec for {modeling_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[target_name] = module
+    spec.loader.exec_module(module)
+    # sanity
+    for klass in ("LlamaModel", "LlamaForCausalLM"):
+        if not hasattr(module, klass):
+            raise RuntimeError(f"{modeling_path} does not define {klass}")
+    return module
+
+# -----------------------------
 # Template helpers
 # -----------------------------
 def _is_mistral_template(tokenizer) -> bool:
@@ -270,54 +297,82 @@ def lopa_generate(model,
         except Exception as e:
             print(f"[debug] render dump failed: {e}")
 
-    # 1) system-only prefill (lower-K only)
-    inner = _get_inner_model(model)
-    full_layers: nn.ModuleList = inner.layers
-    n_layers = len(full_layers)
-    K_eff = max(0, min(int(K), n_layers))
-    lower_layers = nn.ModuleList([full_layers[i] for i in range(K_eff)])
-    inner.layers = lower_layers
-    out_sys_low = inner(input_ids=sys_only, attention_mask=torch.ones_like(sys_only), use_cache=True, return_dict=True)
-    pkv_sys_low = out_sys_low.past_key_values
+    # Prefer custom LoPA API if present
+    use_custom = False
+    try:
+        use_custom = hasattr(_get_inner_model(model).model, "lopa_prefill_lower_k") and hasattr(model, "lopa_step_logits")
+    except Exception:
+        use_custom = False
 
-    # 2) lower-K doc pass
-    dc_low_in = dc_from_subset(pkv_sys_low, list(range(K_eff))) if K_eff > 0 else DynamicCache()
-    out_low = inner(input_ids=ids_phase1[:, L_sys:], past_key_values=dc_low_in,
-                    attention_mask=None, use_cache=True, return_dict=True)
-    pkv_low = out_low.past_key_values
-    inner.layers = full_layers
+    if use_custom:
+        # 1) lower-K prefill on [system+doc+question] with absolute positions inside
+        pref_out = getattr(_get_inner_model(model).model, "lopa_prefill_lower_k")(
+            input_ids=ids_phase1, lower_k=int(K), use_cache=True
+        )
+        combined = pref_out.past_key_values  # lower layers prefilled; upper implicitly empty
+        n_layers = len(_get_inner_model(model).model.layers)
+        if debug:
+            L_all2 = combined.get_seq_length()
+            print(f"[debug] custom prefill: seq_len={L_all2} | expected={L_all}")
+    else:
+        # Fallback: manual two-pass lower-K prefill and explicit upper empties
+        inner = _get_inner_model(model)
+        full_layers: nn.ModuleList = inner.layers
+        n_layers = len(full_layers)
+        K_eff = max(0, min(int(K), n_layers))
+        lower_layers = nn.ModuleList([full_layers[i] for i in range(K_eff)])
+        inner.layers = lower_layers
+        out_sys_low = inner(input_ids=sys_only, attention_mask=torch.ones_like(sys_only), use_cache=True, return_dict=True)
+        pkv_sys_low = out_sys_low.past_key_values
+        dc_low_in = dc_from_subset(pkv_sys_low, list(range(K_eff))) if K_eff > 0 else DynamicCache()
+        out_low = inner(input_ids=ids_phase1[:, L_sys:], past_key_values=dc_low_in,
+                        attention_mask=None, use_cache=True, return_dict=True)
+        pkv_low = out_low.past_key_values
+        inner.layers = full_layers
 
-    # 3) 결합: lower=sys+doc, upper=빈 past (length 0)
-    combined = DynamicCache()
-    num_kv, head_dim, kv_dtype = _kv_meta_from_model(model)
-    for li in range(n_layers):
-        if li < K_eff:
-            k_sys, v_sys = pkv_get(pkv_sys_low, li)
-            k_low, v_low = pkv_get(pkv_low, li)
-            k_cat = torch.cat([k_sys[:, :, :L_sys, :], k_low[:, :, -L_doc:, :]], dim=2)
-            v_cat = torch.cat([v_sys[:, :, :L_sys, :], v_low[:, :, -L_doc:, :]], dim=2)
-        else:
-            k_cat, v_cat = _make_empty_kv(1, num_kv, head_dim, device, kv_dtype)
-        combined.update(k_cat.contiguous(), v_cat.contiguous(), li)
+        combined = DynamicCache()
+        num_kv, head_dim, kv_dtype = _kv_meta_from_model(model)
+        for li in range(n_layers):
+            if li < K_eff:
+                k_sys, v_sys = pkv_get(pkv_sys_low, li)
+                k_low, v_low = pkv_get(pkv_low, li)
+                k_cat = torch.cat([k_sys[:, :, :L_sys, :], k_low[:, :, -L_doc:, :]], dim=2)
+                v_cat = torch.cat([v_sys[:, :, :L_sys, :], v_low[:, :, -L_doc:, :]], dim=2)
+            else:
+                k_cat, v_cat = _make_empty_kv(1, num_kv, head_dim, device, kv_dtype)
+            combined.update(k_cat.contiguous(), v_cat.contiguous(), li)
 
-    if debug:
-        lower_l = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(0, K_eff)}) if K_eff > 0 else []
-        upper_l = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(K_eff, n_layers)}) if K_eff < n_layers else []
-        print(f"[debug] L_sys={L_sys}, L_doc={L_doc}, K={K_eff} | lower_lens={lower_l} | upper_lens={upper_l}")
+        if debug:
+            lower_l = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(0, K_eff)}) if K_eff > 0 else []
+            upper_l = sorted({int(pkv_get(combined, li)[0].shape[2]) for li in range(K_eff, n_layers)}) if K_eff < n_layers else []
+            print(f"[debug] L_sys={L_sys}, L_doc={L_doc}, K={K_eff} | lower_lens={lower_l} | upper_lens={upper_l}")
 
     # 4) header push (seed) — push token-by-token with per-layer position patch
     hdr_tail = ids_hdr[:, L_all:]
     pushed = 0
     last_pushed = None
     if hdr_tail.numel() > 0:
-        for j in range(hdr_tail.size(1)):
-            step_tok = hdr_tail[:, j:j+1]
-            with lopa_cache_position_patch(model, combined):
-                out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=None,
-                                 use_cache=True, return_dict=True)
+        if use_custom:
+            # Push header as a chunk with absolute positions
+            out_seed = getattr(_get_inner_model(model).model, "lopa_forward_from_prefix")(
+                input_ids=hdr_tail,
+                prefix_len=L_all,
+                past_key_values=combined,
+                attention_mask_total_len=L_all + hdr_tail.size(1),
+                logits_to_keep=0,
+            )
             combined = out_seed.past_key_values
-            pushed += 1
-            last_pushed = step_tok
+            pushed = hdr_tail.size(1)
+            last_pushed = hdr_tail[:, -1:]
+        else:
+            for j in range(hdr_tail.size(1)):
+                step_tok = hdr_tail[:, j:j+1]
+                with lopa_cache_position_patch(model, combined):
+                    out_seed = model(input_ids=step_tok, past_key_values=combined, attention_mask=None,
+                                     use_cache=True, return_dict=True)
+                combined = out_seed.past_key_values
+                pushed += 1
+                last_pushed = step_tok
     else:
         # Mistral-style: fallback to the last user token (often </s>)
         step_tok = ids_phase1[:, -1:]
@@ -362,10 +417,22 @@ def lopa_generate(model,
     generated = torch.empty((1, 0), dtype=torch.long, device=device_t)
     cur = 0
     stop_reason = None
+    # track absolute prefix length for custom path
+    abs_prefix = L_all + (pushed if pushed > 0 else 0)
 
     while cur < max_new_tokens:
-        with lopa_cache_position_patch(model, combined):
-            out = model(input_ids=last, past_key_values=combined, attention_mask=None, use_cache=True, return_dict=True)
+        if use_custom:
+            out = getattr(model, "lopa_step_logits")(
+                input_ids=last,
+                prefix_len=abs_prefix,
+                past_key_values=combined,
+                attention_mask_total_len=abs_prefix + 1,
+                logits_to_keep=1,
+                labels=None,
+            )
+        else:
+            with lopa_cache_position_patch(model, combined):
+                out = model(input_ids=last, past_key_values=combined, attention_mask=None, use_cache=True, return_dict=True)
         combined = out.past_key_values
         logits = out.logits[:, -1, :].to(torch.float32)
 
@@ -390,6 +457,8 @@ def lopa_generate(model,
 
         generated = torch.cat([generated, next_tok], dim=1)
         last = next_tok
+        if use_custom:
+            abs_prefix += 1
         cur += 1
 
     if stop_reason is None and cur >= max_new_tokens:
@@ -411,6 +480,10 @@ def main():
     ap.add_argument("--best_dir", type=str, required=True, help="Path to best/ folder produced by training")
     ap.add_argument("--model_name", type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     ap.add_argument("--prefill_layers", type=int, default=4)
+    ap.add_argument("--lopa_modeling_path", type=str, default="lopa_llama_modeling.py",
+                    help="Path to custom Llama modeling file used in training")
+    ap.add_argument("--force_custom_modeling", action="store_true",
+                    help="Require custom modeling to be active for Llama; error if not.")
     ap.add_argument("--system", type=str, default="You are a helpful assistant that answers questions based on the given document. ")
     ap.add_argument("--document", type=str, required=True)
     ap.add_argument("--question", type=str, required=True)
@@ -462,7 +535,23 @@ def main():
     # Prefer a saved base backbone under best_dir/base if present (captures resized embeddings)
     base_path = best_dir / "base"
     base_load_src = str(base_path) if base_path.exists() and any(base_path.iterdir()) else args.model_name
-    base = AutoModelForCausalLM.from_pretrained(base_load_src, trust_remote_code=False, torch_dtype=dtype)
+
+    # Try loading custom Llama modeling before model load
+    llama_mod = None
+    try:
+        llama_mod = load_custom_llama_modeling(args.lopa_modeling_path)
+    except Exception:
+        llama_mod = None
+
+    base = None
+    if llama_mod is not None:
+        try:
+            # Prefer explicit class if available (ensures we really use custom class)
+            base = llama_mod.LlamaForCausalLM.from_pretrained(base_load_src, torch_dtype=dtype)
+        except Exception:
+            base = None
+    if base is None:
+        base = AutoModelForCausalLM.from_pretrained(base_load_src, trust_remote_code=False, torch_dtype=dtype)
     # Ensure special token availability for Mistral
     ensure_mistral_special_token(tokenizer, base)
 
@@ -487,6 +576,18 @@ def main():
 
     # device & eval
     model = model.to(device).eval()
+
+    # Validate custom modeling presence if requested (for Llama)
+    if args.force_custom_modeling:
+        try:
+            is_llama = getattr(model.config, "model_type", "").lower() == "llama"
+        except Exception:
+            is_llama = False
+        if is_llama:
+            has_prefill = hasattr(_get_inner_model(model).model, "lopa_prefill_lower_k")
+            has_step = hasattr(model, "lopa_step_logits")
+            if not (has_prefill and has_step):
+                raise RuntimeError("Custom LoPA modeling not active for Llama at inference. Check --lopa_modeling_path.")
 
     # Force eager attention for all models (stability)
     impl = "eager"

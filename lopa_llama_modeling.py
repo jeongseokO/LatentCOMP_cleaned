@@ -615,6 +615,7 @@ def lopa_build_combined_cache(
             k = lower_cache.key_cache[li]
             v = lower_cache.value_cache[li]
         else:
+            print("Warning: using fallback for Cache implementation.")
             # fallback for generic Cache implementations
             k, v = lower_cache[li]
         dc.update(k, v, li)

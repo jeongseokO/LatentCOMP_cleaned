@@ -140,6 +140,7 @@ def main():
         # - lopa_modeling_path: point to our custom modeling file
         # - attn_impl: default to a stable backend
         # - aux/explicit flags: keep trainer defaults
+        # - sequential_responses: default True (process multi-responses sequentially)
         if not hasattr(args, "lopa_modeling_path") or not args.lopa_modeling_path:
             setattr(args, "lopa_modeling_path", str(here / "lopa_llama_modeling.py"))
         if not hasattr(args, "attn_impl") or not args.attn_impl:
@@ -148,6 +149,8 @@ def main():
             setattr(args, "aux_prefix_loss_ratio", 0.0)
         if not hasattr(args, "explicit_empty_upper_cache"):
             setattr(args, "explicit_empty_upper_cache", False)
+        if not hasattr(args, "sequential_responses"):
+            setattr(args, "sequential_responses", True)
         # LoRA hyperparams expected by pure trainer
         if not hasattr(args, "lora_r"):
             setattr(args, "lora_r", 4)
