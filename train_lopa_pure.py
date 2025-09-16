@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-LoPA-only trainer using custom modeling (lopa_llama_modeling.py)
+LoPA-only trainer (STRICT, responses sequential supported)
+- Custom modeling (lopa_llama_modeling.py) MUST be injected; otherwise abort.
+- Default training: rope_mode="global" + upper_zero_pad_prefix=True (exact zero-pad equivalence).
+- Lower-K prefill: model.model.lopa_prefill_lower_k(...)
+- Upper cache compose:
+    * zero-pad:  model.model.lopa_build_zero_padded_cache(...)
+    * empty-KV:  model.model.lopa_build_combined_cache(...)
+- Step/CE:       model.lopa_step_logits(...), absolute positions enforced by modeling.
 
-- Lower-K prefill via model.model.lopa_prefill_lower_k(...)
-- (Optional) Explicit empty upper KV via model.model.lopa_build_combined_cache(...)
-- Generation loss via model.lopa_step_logits(...), with absolute RoPE positions enforced
+NO FALLBACKS. If any required LoPA API is missing → RuntimeError and stop.
 """
 
 from __future__ import annotations
@@ -14,13 +19,10 @@ import json
 import os
 import random
 from pathlib import Path
-from typing import List, Optional, Tuple
-from types import SimpleNamespace
-import contextlib
+from typing import List, Optional
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, random_split
 from tqdm import tqdm
 
@@ -31,54 +33,92 @@ except Exception:
     FullyShardedDataParallelPlugin = None
     DeepSpeedPlugin = None
 
-# ↓ transformers는 토크나이저/헬퍼만 가져옵니다. 모델은 아래 load_custom_llama_modeling()로 교체 로드
 from transformers import AutoTokenizer, get_cosine_schedule_with_warmup
 from transformers.cache_utils import DynamicCache
-
 from huggingface_hub import create_repo, upload_folder
 
-# 안전: tokenizer thread 이슈 예방
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 
 # -----------------------
-# 1) 커스텀 모델링 주입
+# Strict helpers
+# -----------------------
+def _require(cond: bool, msg: str):
+    if not cond:
+        raise RuntimeError(msg)
+
+def _get_inner_model(m):
+    # unwrap DistributedDataParallel / Accelerate wrapper
+    if hasattr(m, "module"):
+        m = m.module
+    return m
+
+def _unwrap_peft(m):
+    # unwrap PEFT to base model if present
+    try:
+        from peft import PeftModel
+        if isinstance(m, PeftModel):
+            try:
+                m = m.get_base_model()
+            except Exception:
+                m = getattr(m, "base_model", m)
+    except Exception:
+        pass
+    return m
+
+
+# -----------------------
+# Custom modeling injection (STRICT)
 # -----------------------
 def load_custom_llama_modeling(modeling_path: Path):
     """
-    Load local `lopa_llama_modeling.py` as `transformers.models.llama.modeling_llama`,
-    so relative imports inside the file (e.g., `from ...masking_utils`) work.
+    Load local `lopa_llama_modeling.py` as `transformers.models.llama.modeling_llama`.
+    - sys.modules 엔트리 교체
+    - 부모 패키지 속성(transformers.models.llama.modeling_llama)도 함께 교체
+    - 로드된 module 객체 자체로 API 검증 (재임포트 X)
     """
-    import importlib.util, sys, importlib
-    # Ensure base package is imported
+    import importlib.util, sys
     import transformers
-    import transformers.models.llama  # ensure package exists
+    import transformers.models.llama as llama_pkg  # parent pkg object
 
     target_name = "transformers.models.llama.modeling_llama"
-    # If HF's modeling_llama is already imported, drop it to override.
-    if target_name in sys.modules:
-        del sys.modules[target_name]
+    sys.modules.pop(target_name, None)
 
     spec = importlib.util.spec_from_file_location(target_name, str(modeling_path))
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Failed to load spec for {modeling_path}")
     module = importlib.util.module_from_spec(spec)
-    # Register the module under the target package name BEFORE executing so relative imports resolve.
     sys.modules[target_name] = module
     spec.loader.exec_module(module)
 
-    # Sanity check
-    for klass in ("LlamaModel", "LlamaForCausalLM"):
-        if not hasattr(module, klass):
-            raise RuntimeError(f"{modeling_path} does not define {klass}")
+    # also patch parent package attribute
+    setattr(llama_pkg, "modeling_llama", module)
+
+    # strict API checks on the loaded module itself
+    for a in ("LlamaModel", "LlamaForCausalLM"):
+        _require(hasattr(module, a), f"Patched module missing `{a}` in {modeling_path}")
+
+    _require(hasattr(module.LlamaModel, "lopa_prefill_lower_k"), "Patched LlamaModel lacks `lopa_prefill_lower_k`")
+    _require(hasattr(module.LlamaModel, "lopa_build_zero_padded_cache"), "Patched LlamaModel lacks `lopa_build_zero_padded_cache`")
+    _require(hasattr(module.LlamaModel, "lopa_build_combined_cache"), "Patched LlamaModel lacks `lopa_build_combined_cache`")
+    _require(hasattr(module.LlamaModel, "lopa_forward_from_prefix"), "Patched LlamaModel lacks `lopa_forward_from_prefix`")
+    _require(hasattr(module.LlamaForCausalLM, "lopa_step_logits"), "Patched LlamaForCausalLM lacks `lopa_step_logits`")
+
+    print("[DEBUG] modeling_llama path:", modeling_path)
+    print("[DEBUG] bound:",
+          hasattr(module.LlamaModel, "lopa_prefill_lower_k"),
+          hasattr(module.LlamaModel, "lopa_build_zero_padded_cache"),
+          hasattr(module.LlamaModel, "lopa_build_combined_cache"),
+          hasattr(module.LlamaModel, "lopa_forward_from_prefix"),
+          hasattr(module.LlamaForCausalLM, "lopa_step_logits"))
     return module
 
 
 # -----------------------
-# 2) Argparser
+# Argparser
 # -----------------------
 def build_argparser():
-    p = argparse.ArgumentParser("LoPA-only trainer (custom modeling)")
+    p = argparse.ArgumentParser("LoPA-only trainer (STRICT) — Default: global + zero-pad")
     # core
     p.add_argument("--model_name", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct")
     p.add_argument("--data_file", type=str, required=True)
@@ -87,53 +127,74 @@ def build_argparser():
     p.add_argument("--lr", type=float, default=5e-5)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--prefill_layers", type=int, default=8, help="K (lower layers) used for prefill")
+
     # modeling file
     p.add_argument("--lopa_modeling_path", type=str, default="lopa_llama_modeling.py",
                    help="Path to the modified modeling_llama.py file")
+
     # LoRA (optional)
     p.add_argument("--use_lora", type=str, default="True")
-    p.add_argument("--lora_r", type=int, default=4)
-    p.add_argument("--lora_alpha", type=int, default=8)
+    p.add_argument("--lora_r", type=int, default=16)
+    p.add_argument("--lora_alpha", type=int, default=256)
     p.add_argument("--lora_dropout", type=float, default=0.05)
+
     # backend
     p.add_argument("--attn_impl", type=str, choices=["eager", "sdpa", "flash_attention_2"], default="eager")
+
     # dtype
     p.add_argument("--dtype", type=str, choices=["auto","bf16","fp16","fp32"], default="auto",
                    help="auto=bf16(if supported) else fp16 on CUDA; fp32 on CPU")
     p.add_argument("--no_tf32", action="store_true")
     p.add_argument("--sdpa_math_only", action="store_true")
+
     # schedule/clip
     p.add_argument("--warmup_steps", type=int, default=0)
     p.add_argument("--warmup_ratio", type=float, default=0.05)
     p.add_argument("--grad_clip", type=float, default=1.0)
+
     # data
     p.add_argument("--max_doc_tokens", type=int, default=2048)
     p.add_argument("--explode", action="store_true", default=True)
     p.add_argument("--no_explode", dest="explode", action="store_false")
     p.add_argument("--group_by_question", action="store_true", default=True)
     p.add_argument("--no_group_by_question", dest="group_by_question", action="store_false")
+
     # IO
     p.add_argument("--save_best_dir", type=str, default="./_best_ckpt")
     p.add_argument("--cache_dir_model", type=str, default=None)
     p.add_argument("--cache_dir_tokenizer", type=str, default=None)
     p.add_argument("--wandb_project", type=str, default=None)
+
     # hub
     p.add_argument("--hf_repo_id", type=str, default=None)
     p.add_argument("--push_to_hub", action="store_true")
     p.add_argument("--private_repo", action="store_true")
+
     # distributed
     p.add_argument("--dist_mode", type=str, choices=["ddp", "fsdp", "deepspeed"], default="ddp")
     p.add_argument("--zero_stage", type=int, default=2)
-    # extras
-    p.add_argument("--aux_prefix_loss_ratio", type=float, default=0.0,
-                   help="Optional lower-K-only prefix CE loss weight (0.02~0.1 추천). 0이면 사용 안함.")
+
+    # LoPA rope/zero-pad options (DEFAULTS)
+    p.add_argument("--lopa_rope_mode", type=str, choices=["local","global"], default="global",
+                   help="LoPA RoPE: local=per-layer local positions, global=single global positions")
+    p.add_argument("--upper_zero_pad_prefix", dest="upper_zero_pad_prefix", action="store_true", default=True,
+                   help="(DEFAULT ON) In global mode, upper layers get L_all-length 0-KV (exact zero-pad equivalence).")
+    p.add_argument("--no_upper_zero_pad_prefix", dest="upper_zero_pad_prefix",
+                   action="store_false", help=argparse.SUPPRESS)
     p.add_argument("--explicit_empty_upper_cache", action="store_true",
-                   help="상위 레이어에 명시적 0-길이 KV를 채워 넣어 디버깅/가독성 확보(선택).")
+                   help="(Debug) Fill explicit empty KV for upper (length=0). Ignored if zero-pad is ON.")
+
+    # NEW: responses sequential switch (DEFAULT: True)
+    p.add_argument("--responses_sequential", action="store_true", default=True,
+                   help="Process multiple responses per question sequentially (forward+backward per response).")
+    p.add_argument("--no_responses_sequential", dest="responses_sequential",
+                   action="store_false", help=argparse.SUPPRESS)
+
     return p
 
 
 # -----------------------
-# 3) Dataset & Template
+# Dataset & Template
 # -----------------------
 class QADataset(Dataset):
     def __init__(self, path: str, tokenizer, max_doc_tokens: int = 2048,
@@ -197,7 +258,6 @@ def apply_chat_template(tokenizer, messages, add_generation_prompt: bool):
         return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt)
     except TypeError:
         s = tokenizer.apply_chat_template(messages, tokenize=False)
-        # (Optional) Mistral-style header 보정
         tmpl = getattr(tokenizer, "chat_template", "") or ""
         if add_generation_prompt and "<|start_header_id|>" in tmpl:
             s += "<|start_header_id|>assistant<|end_header_id|>\n\n"
@@ -209,52 +269,8 @@ def tokens_from_messages(tokenizer, messages, device, add_generation_prompt=Fals
 
 
 # -----------------------
-# 4) Utilities
+# Accelerator builder
 # -----------------------
-def set_seed(seed: int):
-    random.seed(seed); torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
-
-def _get_inner_model(m):
-    if hasattr(m, "module"):
-        m = m.module
-    return m
-
-def _get_layers_owner(m: nn.Module) -> nn.Module:
-    """Robustly find the decoder backbone that owns `.layers`.
-
-    Works across PEFT/Accelerate wrappers and model variants.
-    """
-    # unwrap Accelerate/DDP first
-    m = _get_inner_model(m)
-    # unwrap PEFT
-    try:
-        from peft import PeftModel
-        if isinstance(m, PeftModel):
-            try:
-                m = m.get_base_model()
-            except Exception:
-                m = getattr(m, "base_model", m)
-    except Exception:
-        pass
-    # direct children commonly used
-    for attr in ("model", "transformer", "backbone", "base_model", "language_model"):
-        if hasattr(m, attr):
-            cand = getattr(m, attr)
-            if hasattr(cand, "layers") and isinstance(getattr(cand, "layers", None), nn.ModuleList):
-                return cand
-            if hasattr(cand, "decoder") and hasattr(cand.decoder, "layers") and isinstance(cand.decoder.layers, nn.ModuleList):
-                return cand.decoder
-    # self
-    if hasattr(m, "layers") and isinstance(getattr(m, "layers", None), nn.ModuleList):
-        return m
-    # search any child
-    for child in m.modules():
-        if child is m:
-            continue
-        if hasattr(child, "layers") and isinstance(getattr(child, "layers", None), nn.ModuleList):
-            return child
-    raise AttributeError("Could not locate inner base model with a .layers attribute")
-
 def _build_accelerator(args) -> Accelerator:
     if args.dtype == "bf16": mp = "bf16"
     elif args.dtype == "fp16": mp = "fp16"
@@ -282,72 +298,77 @@ def _build_accelerator(args) -> Accelerator:
 
 
 # -----------------------
-# 5) Train
+# Train (STRICT)
 # -----------------------
 def train(args):
     accelerator = _build_accelerator(args)
-    set_seed(args.seed)
+    random.seed(args.seed); torch.manual_seed(args.seed); torch.cuda.manual_seed_all(args.seed)
     device = accelerator.device
 
-    # Load custom modeling BEFORE instantiating the model
+    # 1) Load & assert custom modeling BEFORE instantiating model
     modeling_path = Path(args.lopa_modeling_path).resolve()
+    _require(modeling_path.exists(), f"lopa_modeling_path not found: {modeling_path}")
     llama_mod = load_custom_llama_modeling(modeling_path)
-    LlamaForCausalLM = llama_mod.LlamaForCausalLM
+    LlamaForCausalLM = llama_mod.LlamaForCausalLM  # noqa
 
+    # 2) Tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, cache_dir=args.cache_dir_tokenizer, use_fast=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    # dtype
+    # 3) dtype
     if args.dtype == "fp32": dtype = torch.float32
     elif args.dtype == "bf16": dtype = torch.bfloat16
     elif args.dtype == "fp16": dtype = torch.float16
     else:
         dtype = (torch.bfloat16 if (device == "cuda" and torch.cuda.is_bf16_supported())
                  else (torch.float16 if device == "cuda" else torch.float32))
-
-    # backend flags
+    dtype = torch.bfloat16
     if args.no_tf32 and torch.cuda.is_available():
         try:
             torch.backends.cuda.matmul.allow_tf32 = False
             torch.backends.cudnn.allow_tf32 = False
-        except Exception: pass
+        except Exception:
+            pass
     if args.sdpa_math_only and torch.cuda.is_available():
         try:
             torch.backends.cuda.enable_flash_sdp(False)
             torch.backends.cuda.enable_mem_efficient_sdp(False)
             torch.backends.cuda.enable_math_sdp(True)
-        except Exception: pass
+        except Exception:
+            pass
 
-    # Instantiate model from our custom class
-    model = LlamaForCausalLM.from_pretrained(
-        args.model_name, torch_dtype=dtype, cache_dir=args.cache_dir_model
-    )
+    # 4) Instantiate model (patched class)
+    model = LlamaForCausalLM.from_pretrained(args.model_name, torch_dtype=dtype, cache_dir=args.cache_dir_model)
 
-    # Attention impl
+    # 5) Attention impl
     impl = args.attn_impl
     try:
         model.config._attn_implementation = impl
-        _get_inner_model(model).model.config._attn_implementation = impl  # be explicit
+        _get_inner_model(model).model.config._attn_implementation = impl
     except Exception:
         pass
     if accelerator.is_main_process:
         print(f"[Info] attn_implementation = {impl}")
 
-    # Enforce custom LoPA modeling availability (must be present)
-    try:
-        has_prefill = hasattr(_get_inner_model(model).model, "lopa_prefill_lower_k")
-    except Exception:
-        has_prefill = False
-    has_step = hasattr(model, "lopa_step_logits")
-    if not (has_prefill and has_step):
-        raise RuntimeError(
-            "Custom LoPA modeling not active. Ensure lopa_llama_modeling.py is loaded and bound. "
-            "Check --lopa_modeling_path and that no other import preloads transformers.models.llama.modeling_llama."
-        )
+    # 6) STRICT runtime API checks (instance-level)
+    inner = _get_inner_model(model)
+    inner = _unwrap_peft(inner)
+    lm = getattr(inner, "model", None)
+    _require(lm is not None, "Inner base model not found (missing `.model`).")
+    for need in ("lopa_prefill_lower_k", "lopa_build_zero_padded_cache", "lopa_build_combined_cache", "lopa_forward_from_prefix"):
+        _require(hasattr(lm, need), f"LlamaModel lacks `{need}`. Custom modeling injection failed.")
+    _require(hasattr(model, "lopa_step_logits"), "LlamaForCausalLM lacks `lopa_step_logits`. Injection failed.")
 
-    # LoRA (optional)
+    # 7) rope_mode (default: global)
+    rope_mode = str(getattr(args, "lopa_rope_mode", "global"))
+    upper_zero = bool(getattr(args, "upper_zero_pad_prefix", True))
+    if accelerator.is_main_process:
+        print(f"[LoPA] rope_mode={rope_mode} | upper_zero_pad_prefix={upper_zero}")
+    setattr(lm, "lopa_rope_mode", rope_mode)
+
+    # 8) LoRA (optional)
     use_lora = str(args.use_lora).lower() in ("1","true","yes","y")
     if use_lora:
         from peft import LoraConfig, get_peft_model, TaskType
@@ -356,40 +377,50 @@ def train(args):
                           bias="none", task_type=TaskType.CAUSAL_LM,
                           target_modules=["q_proj","k_proj","v_proj","gate_proj","up_proj","down_proj"])
         model = get_peft_model(model, lcfg)
-    else:
-        for p in model.parameters(): p.requires_grad = True
 
-    # Dataset / loaders
+    # 9) Datasets / loaders
     ds_all = QADataset(args.data_file, tokenizer,
                        max_doc_tokens=int(args.max_doc_tokens),
                        explode=bool(args.explode),
                        group_by_question=bool(args.group_by_question),
                        seed=int(args.seed))
+    _require(len(ds_all) > 0, f"Dataset empty after filters: {args.data_file}")
+
     val_size = max(1, int(0.1 * len(ds_all)))
     train_size = max(1, len(ds_all) - val_size)
     train_set, val_set = random_split(ds_all, [train_size, val_size])
     pin_mem = torch.cuda.is_available()
     dl_train = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4,
-                          pin_memory=pin_mem, persistent_workers=True if 4>0 else False,
-                          collate_fn=collate_identity)
+                          pin_memory=pin_mem, persistent_workers=True, collate_fn=collate_identity)
     dl_val = DataLoader(val_set, batch_size=1, shuffle=False, num_workers=2,
-                        pin_memory=pin_mem, persistent_workers=True if 2>0 else False,
-                        collate_fn=collate_identity)
+                        pin_memory=pin_mem, persistent_workers=True, collate_fn=collate_identity)
 
     optim = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=args.lr)
     model, optim, dl_train, dl_val = accelerator.prepare(model, optim, dl_train, dl_val)
 
-    # Env print
+    # 10) runtime-safe LlamaModel handle (unwrap Accelerate+PEFT every time)
+    def _lm_handle() -> nn.Module:
+        inner_now = _get_inner_model(model)
+        inner_now = _unwrap_peft(inner_now)
+        lm_now = getattr(inner_now, "model", None)
+        _require(lm_now is not None, "Inner base model not found (missing `.model`).")
+        for need in ("lopa_prefill_lower_k", "lopa_build_zero_padded_cache",
+                     "lopa_build_combined_cache", "lopa_forward_from_prefix"):
+            _require(hasattr(lm_now, need), f"LlamaModel lacks `{need}` at runtime (bad injection or stale handle).")
+        return lm_now
+
+    # 11) re-affirm rope_mode on runtime handle (after prepare/PEFT)
+    _lm_handle().lopa_rope_mode = rope_mode
+    if accelerator.is_main_process:
+        print("[LoPA] re-affirm rope_mode on runtime handle ->", _lm_handle().lopa_rope_mode)
+
     if accelerator.is_main_process:
         try:
             dev_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else str(device)
-        except Exception: dev_name = str(device)
+        except Exception:
+            dev_name = str(device)
         print("[Env] torch:", torch.__version__, "cuda:", torch.version.cuda)
         print("[Env] device:", dev_name, "| param dtype:", next(_get_inner_model(model).parameters()).dtype)
-        try:
-            print("[Env] TF32 matmul:", torch.backends.cuda.matmul.allow_tf32,
-                  "cudnn:", torch.backends.cudnn.allow_tf32)
-        except Exception: pass
 
     total_train_steps = args.epochs * max(1, len(dl_train))
     warmup_steps = args.warmup_steps if int(args.warmup_steps) > 0 else int(args.warmup_ratio * total_train_steps)
@@ -399,192 +430,132 @@ def train(args):
 
     system_prompt = "You are a helpful assistant that answers questions based on the given document. "
     K = max(0, int(args.prefill_layers))
-    aux_ratio = float(args.aux_prefix_loss_ratio or 0.0)
+    aux_ratio = float(getattr(args, "aux_prefix_loss_ratio", 0.0) or 0.0)
 
-    # ---- helpers inside train() ----
-    def _kv_meta_from_model(model_like):
-        try:
-            cfg = getattr(model_like, "config", None) or getattr(_get_inner_model(model_like), "config", None)
-        except Exception:
-            cfg = getattr(_get_inner_model(model_like), "config", None)
-        num_heads = getattr(cfg, "num_attention_heads", None)
-        num_kv = getattr(cfg, "num_key_value_heads", None) or num_heads
-        hidden = getattr(cfg, "hidden_size", None)
-        head_dim = (hidden // num_heads) if (hidden and num_heads) else None
-        try:
-            dtype = next(_get_inner_model(model_like).parameters()).dtype
-        except Exception:
-            dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-        return int(num_kv), int(head_dim), dtype
+    # -----------------------
+    # Core loss (STRICT path)
+    # -----------------------
+    def _prefill_lower_k(ids_phase1: torch.LongTensor):
+        return _lm_handle().lopa_prefill_lower_k(input_ids=ids_phase1, lower_k=K, use_cache=True)
 
-    def _make_empty_kv(batch: int, num_kv: int, head_dim: int, device, dtype):
-        shape = (batch, num_kv, 0, head_dim)
-        k = torch.empty(shape, device=device, dtype=dtype)
-        v = torch.empty(shape, device=device, dtype=dtype)
-        return k.contiguous(), v.contiguous()
+    def _compose_upper_cache(lower_cache: DynamicCache, L_all: int, batch_size: int, device) -> DynamicCache:
+        if rope_mode == "global" and upper_zero:
+            return _lm_handle().lopa_build_zero_padded_cache(
+                lower_cache, lower_k=K, batch_size=batch_size, device=device, zero_len=L_all
+            )
+        if bool(getattr(args, "explicit_empty_upper_cache", False)):
+            return _lm_handle().lopa_build_combined_cache(
+                lower_cache, lower_k=K, batch_size=batch_size, device=device
+            )
+        return lower_cache
 
-    def _pkv_get(pkv, idx: int):
-        if hasattr(pkv, "layers"):
-            layer = pkv.layers[idx]
-            return layer.keys, layer.values
-        if hasattr(pkv, "key_cache"):
-            return pkv.key_cache[idx], pkv.value_cache[idx]
-        return pkv[idx]
-
-    @contextlib.contextmanager
-    def lopa_cache_position_patch(model_obj, past_key_values):
-        """
-        Align per-layer cache positions when lower layers have prefill past and upper layers are empty.
-        Mirrors the inference-time patch.
-        """
-        inner = _get_layers_owner(model_obj)
-
-        def _pkv_past_len(li: int) -> int:
-            if hasattr(past_key_values, "key_cache") and hasattr(past_key_values, "value_cache"):
-                return int(past_key_values.key_cache[li].shape[2])
-            if hasattr(past_key_values, "layers"):
-                return int(past_key_values.layers[li].keys.shape[2])
-            return int(past_key_values[li][0].shape[2])
-
-        n_layers = len(inner.layers)
-        past_lens = [_pkv_past_len(li) for li in range(n_layers)]
-
-        handles = []
-        for li, layer in enumerate(inner.layers):
-            layer._lopa_past = int(past_lens[li])
-
-            def _pre_hook(module, args, kwargs):
-                past_len = getattr(module, "_lopa_past", 0)
-                cp = kwargs.get("cache_position", None)
-                pi = kwargs.get("position_ids", None)
-                start_val = None
-                if isinstance(cp, torch.Tensor) and cp.numel() > 0:
-                    start_val = int(cp.view(-1)[0].item())
-                elif isinstance(pi, torch.Tensor) and pi.numel() > 0:
-                    start_val = int(pi.view(-1)[0].item())
-                if start_val is not None:
-                    off = start_val - past_len
-                    if off != 0:
-                        if isinstance(cp, torch.Tensor):
-                            kwargs["cache_position"] = cp - off
-                        if isinstance(pi, torch.Tensor):
-                            kwargs["position_ids"] = pi - off
-                return args, kwargs
-
-            h = layer.register_forward_pre_hook(_pre_hook, with_kwargs=True)
-            handles.append(h)
-
-        try:
-            yield
-        finally:
-            for h in handles:
-                h.remove()
-            for layer in inner.layers:
-                if hasattr(layer, "_lopa_past"):
-                    delattr(layer, "_lopa_past")
-
-    def _lopa_prefill_lower_k_fallback(input_ids: torch.LongTensor, lower_k: int):
-        """Run only lower-K layers and return a SimpleNamespace with .past_key_values (DynamicCache)."""
-        inner = _get_layers_owner(model)
-        full_layers = inner.layers
-        K_eff = max(0, min(int(lower_k), len(full_layers)))
-        lower_layers = nn.ModuleList([full_layers[i] for i in range(K_eff)])
-        inner.layers = lower_layers
-        try:
-            out = inner(input_ids=input_ids, attention_mask=torch.ones_like(input_ids), use_cache=True, return_dict=True)
-            pkv = out.past_key_values
-        finally:
-            inner.layers = full_layers
-        return SimpleNamespace(past_key_values=pkv)
-
-    def _lopa_build_combined_cache_fallback(lower_cache: DynamicCache, lower_k: int, batch_size: int, device):
-        dc = DynamicCache()
-        num_kv, head_dim, kv_dtype = _kv_meta_from_model(model)
-        n_layers = len(_get_layers_owner(model).layers)
-        for li in range(n_layers):
-            if li < int(lower_k):
-                k, v = _pkv_get(lower_cache, li)
-                dc.update(k, v, li)
-            else:
-                k_e, v_e = _make_empty_kv(batch_size, num_kv, head_dim, device, kv_dtype)
-                dc.update(k_e, v_e, li)
-        return dc
-
-    def _lopa_step_logits_fallback(inp: torch.LongTensor, prefix_len: int, past_key_values: DynamicCache,
-                                   attention_mask_total_len: Optional[int], labels: Optional[torch.LongTensor]):
-        # Run forward with per-layer position alignment; rely on HF loss if labels given
-        with lopa_cache_position_patch(model, past_key_values):
-            out = model(input_ids=inp, past_key_values=past_key_values, attention_mask=None,
-                        use_cache=True, return_dict=True, labels=labels)
-        return out
-
-    # detect availability of custom LoPA API
-    try:
-        _has_lopa_prefill = hasattr(_get_inner_model(model).model, "lopa_prefill_lower_k")
-    except Exception:
-        _has_lopa_prefill = False
-    try:
-        _has_lopa_step = hasattr(model, "lopa_step_logits")
-    except Exception:
-        _has_lopa_step = False
-    if accelerator.is_main_process:
-        print(f"[LoPA-API] prefill={_has_lopa_prefill} | step_logits={_has_lopa_step}")
-
-    def compute_loss_on_sample(q: str, d: str, resp: str, debug: bool = False) -> torch.Tensor:
+    def compute_loss_on_sample(q: str, d: str, resp: str) -> torch.Tensor:
         msgs = build_messages(system_prompt, d, q, include_query=True)
-        ids_phase1 = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=False)  # [sys+user]
-        ids_hdr    = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=True)   # [sys+user+<assistant header>]
+        ids_phase1 = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=False)
+        ids_hdr    = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=True)
 
-        # Phase-1: Lower-K prefill (absolute positions enforced internally)
-        with torch.no_grad():
-            try:
-                if _has_lopa_prefill:
-                    pref_out = getattr(_get_inner_model(model).model, "lopa_prefill_lower_k")(
-                        input_ids=ids_phase1, lower_k=K, use_cache=True
-                    )
-                else:
-                    if accelerator.is_main_process and debug:
-                        print("[LoPA-fallback] using trainer fallback for prefill")
-                    pref_out = _lopa_prefill_lower_k_fallback(ids_phase1, K)
-            except Exception:
-                # final guard: fallback
-                pref_out = _lopa_prefill_lower_k_fallback(ids_phase1, K)
+        pref_out = _prefill_lower_k(ids_phase1)
         lower_cache = pref_out.past_key_values
-        L_all = lower_cache.get_seq_length()  # == ids_phase1.size(1)
+        L_all = lower_cache.get_seq_length()
+        combined = _compose_upper_cache(lower_cache, L_all, ids_phase1.size(0), ids_phase1.device)
 
-        # (Optional) explicit empty upper cache
-        if bool(args.explicit_empty_upper_cache):
-            try:
-                if _has_lopa_prefill:
-                    combined = getattr(_get_inner_model(model).model, "lopa_build_combined_cache")(
-                        lower_cache, lower_k=K, batch_size=ids_phase1.size(0), device=ids_phase1.device
-                    )
-                else:
-                    combined = _lopa_build_combined_cache_fallback(lower_cache, K, ids_phase1.size(0), ids_phase1.device)
-            except Exception:
-                combined = _lopa_build_combined_cache_fallback(lower_cache, K, ids_phase1.size(0), ids_phase1.device)
-        else:
-            combined = lower_cache
-
-        # Assistant tokens
         msgs_ass = msgs + [{"role": "assistant", "content": resp}]
-        full_ids = tokens_from_messages(tokenizer, msgs_ass, device, add_generation_prompt=False)
+        full_ids = tokens_from_messages(tokenizer, msgs_ass, accelerator.device, add_generation_prompt=False)
         assistant_ids = full_ids[:, ids_hdr.size(1):]
-        if assistant_ids.numel() == 0:
-            return torch.tensor(float('nan'), device=device)
+        _require(assistant_ids.numel() > 0, "assistant_ids is empty")
 
-        # Seed(assistant header)
-        seed = ids_hdr[:, L_all:]
-        if seed.numel() == 0:
-            seed = ids_phase1[:, -1:]  # fallback (거의 안 씀)
-
+        seed = ids_hdr[:, L_all:] if ids_hdr.size(1) > L_all else ids_phase1[:, -1:]
         inp = torch.cat([seed, assistant_ids], dim=1)
         labels = inp.clone(); labels[:, :seed.size(1)] = -100
         T = inp.size(1)
 
-        # Main generation CE (absolute positions handled in lopa_step_logits)
-        if _has_lopa_step:
-            out = getattr(model, "lopa_step_logits")(
+        out = model.lopa_step_logits(
+            input_ids=inp, prefix_len=L_all, past_key_values=combined,
+            attention_mask_total_len=L_all + T, logits_to_keep=T, labels=labels,
+        )
+        loss = out.loss if out.loss is not None else torch.zeros((), device=accelerator.device, dtype=torch.float32)
+        if aux_ratio > 0.0 and K > 0:
+            pass
+        return loss
+
+    def compute_loss_on_group_mean(qid: str, q: str, d: str, responses: List[str]) -> torch.Tensor:
+        """(기존 방식) 응답 로스를 평균내어 한 번만 backward."""
+        msgs = build_messages(system_prompt, d, q, include_query=True)
+        ids_phase1 = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=False)
+        ids_hdr    = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=True)
+
+        pref_out = _prefill_lower_k(ids_phase1)
+        lower_cache = pref_out.past_key_values
+        L_all = lower_cache.get_seq_length()
+        combined = _compose_upper_cache(lower_cache, L_all, ids_phase1.size(0), ids_phase1.device)
+
+        losses = []
+        for resp in responses:
+            if not isinstance(resp, str) or not resp.strip():
+                continue
+            msgs_ass = msgs + [{"role": "assistant", "content": resp}]
+            full_ids = tokens_from_messages(tokenizer, msgs_ass, accelerator.device, add_generation_prompt=False)
+            assistant_ids = full_ids[:, ids_hdr.size(1):]
+            if assistant_ids.numel() == 0:
+                continue
+            seed = ids_hdr[:, L_all:] if ids_hdr.size(1) > L_all else ids_phase1[:, -1:]
+            inp = torch.cat([seed, assistant_ids], dim=1)
+            labels = inp.clone(); labels[:, :seed.size(1)] = -100
+            T = inp.size(1)
+            out = model.lopa_step_logits(
+                input_ids=inp, prefix_len=L_all, past_key_values=combined,
+                attention_mask_total_len=L_all + T, logits_to_keep=T, labels=labels,
+            )
+            if out.loss is not None and torch.isfinite(out.loss):
+                losses.append(out.loss)
+        _require(len(losses) > 0, "All responses invalid/empty for this item.")
+        return torch.stack(losses, dim=0).mean()
+
+    def compute_loss_on_group_seq(qid: str, q: str, d: str, responses: List[str]) -> float:
+        """
+        응답별로 완전히 순차 forward/backward.
+        각 응답마다 fresh upper cache를 *다시* 만들기 때문에 그래프 공유가 없어 안전.
+        반환값은 로깅용 평균 loss(float); optimizer.step()/zero_grad 는 바깥 루프에서.
+        """
+        # 0) 공통 토크나이즈
+        msgs = build_messages(system_prompt, d, q, include_query=True)
+        ids_phase1 = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=False)
+        ids_hdr    = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=True)
+
+        # 1) 하층 K 프리필 (no_grad) — 공통
+        with torch.no_grad():
+            pref_out = _prefill_lower_k(ids_phase1)
+        lower_cache = pref_out.past_key_values
+        L_all = lower_cache.get_seq_length()
+
+        # 2) 유효 응답 목록 먼저 수집(빈 것/공백 제외)
+        eligible = []
+        for resp in responses:
+            if not isinstance(resp, str) or not resp.strip():
+                continue
+            msgs_ass = msgs + [{"role": "assistant", "content": resp}]
+            full_ids = tokens_from_messages(tokenizer, msgs_ass, accelerator.device, add_generation_prompt=False)
+            assistant_ids = full_ids[:, ids_hdr.size(1):]
+            if assistant_ids.numel() == 0:
+                continue
+            eligible.append((resp, assistant_ids))
+        _require(len(eligible) > 0, "All responses invalid/empty for this item.")
+        eff_total = len(eligible)
+        bs = max(1, args.batch_size)
+
+        # 3) 순차 실행(응답마다 fresh combined 재구성 → 독립 그래프)
+        losses_for_log = []
+        for resp, assistant_ids in eligible:
+            # seed
+            seed = ids_hdr[:, L_all:] if ids_hdr.size(1) > L_all else ids_phase1[:, -1:]
+            inp = torch.cat([seed, assistant_ids], dim=1)
+            labels = inp.clone(); labels[:, :seed.size(1)] = -100
+            T = inp.size(1)
+
+            # ★ 핵심: 매 응답마다 *새로운* combined 캐시를 만든다
+            combined = _compose_upper_cache(lower_cache, L_all, ids_phase1.size(0), ids_phase1.device)
+
+            out = model.lopa_step_logits(
                 input_ids=inp,
                 prefix_len=L_all,
                 past_key_values=combined,
@@ -592,107 +563,23 @@ def train(args):
                 logits_to_keep=T,
                 labels=labels,
             )
-        else:
-            if accelerator.is_main_process and debug:
-                print("[LoPA-fallback] using trainer fallback for step logits")
-            out = _lopa_step_logits_fallback(inp, L_all, combined, L_all + T, labels)
-        loss = out.loss if out.loss is not None else torch.zeros((), device=device, dtype=torch.float32)
+            _require(out.loss is not None and torch.isfinite(out.loss), "loss is NaN/inf")
+            losses_for_log.append(float(out.loss.detach().item()))
 
-        # (Optional) auxiliary prefix loss on lower-K-only to strengthen System/Doc/User representation
-        if aux_ratio > 0.0 and K > 0:
-            try:
-                # run lower-K only forward (no cache, absolute pos inside helper)
-                # 간단히: next-token CE on ids_phase1 (mask system-only predict if 원치 않음)
-                # 여기서는 document/question 예측에만 기여하도록 system 첫 토큰 제외
-                inner = _get_inner_model(model).model
-                # 재사용을 위해 내부 로우 포워드 구성: lower-K만 돌리려면 기존 helper를 재활용하기보다,
-                # 단순히 hidden을 얻고 lm_head를 통해 CE 계산하는 방식으로 간략화할 수도 있지만,
-                # 여기선 손쉬운 경로로 main loss에 비해 작은 비율만 주는 걸 권장.
-                # -> 실제로는 별도 헬퍼가 없으므로 main loss만으로도 충분한 경우가 많음.
-                # (aux는 선택 사항이므로 복잡 로직은 생략)
-                pass
-            except Exception:
-                pass
+            # ZeRO/AMP 호환 backward (평균 스케일 유지)
+            accelerator.backward(out.loss / eff_total / bs)
 
-        if debug and accelerator.is_main_process:
-            try:
-                print(f"[debug] L_all={L_all}, seed_len={seed.size(1)}, assist_len={assistant_ids.size(1)}, K={K}")
-            except Exception:
-                pass
+            # (선택) 메모리 여유 없음이면 아래 라인 사용
+            # del combined, out; torch.cuda.empty_cache()
 
-        return loss
+        return sum(losses_for_log) / eff_total
 
-    def compute_loss_on_group(qid: str, q: str, d: str, responses: List[str], debug: bool = False) -> torch.Tensor:
-        msgs = build_messages(system_prompt, d, q, include_query=True)
-        ids_phase1 = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=False)
-        ids_hdr    = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=True)
-
-        with torch.no_grad():
-            try:
-                if _has_lopa_prefill:
-                    pref_out = getattr(_get_inner_model(model).model, "lopa_prefill_lower_k")(
-                        input_ids=ids_phase1, lower_k=K, use_cache=True
-                    )
-                else:
-                    pref_out = _lopa_prefill_lower_k_fallback(ids_phase1, K)
-            except Exception:
-                pref_out = _lopa_prefill_lower_k_fallback(ids_phase1, K)
-        lower_cache = pref_out.past_key_values
-        L_all = lower_cache.get_seq_length()
-
-        if bool(args.explicit_empty_upper_cache):
-            try:
-                if _has_lopa_prefill:
-                    combined = getattr(_get_inner_model(model).model, "lopa_build_combined_cache")(
-                        lower_cache, lower_k=K, batch_size=ids_phase1.size(0), device=ids_phase1.device
-                    )
-                else:
-                    combined = _lopa_build_combined_cache_fallback(lower_cache, K, ids_phase1.size(0), ids_phase1.device)
-            except Exception:
-                combined = _lopa_build_combined_cache_fallback(lower_cache, K, ids_phase1.size(0), ids_phase1.device)
-        else:
-            combined = lower_cache
-
-        losses = []
-        for resp in responses:
-            if not isinstance(resp, str) or not resp.strip():
-                continue
-            msgs_ass = msgs + [{"role": "assistant", "content": resp}]
-            full_ids = tokens_from_messages(tokenizer, msgs_ass, device, add_generation_prompt=False)
-            assistant_ids = full_ids[:, ids_hdr.size(1):]
-            if assistant_ids.numel() == 0:
-                continue
-
-            seed = ids_hdr[:, L_all:]
-            if seed.numel() == 0:
-                seed = ids_phase1[:, -1:]
-            inp = torch.cat([seed, assistant_ids], dim=1)
-            labels = inp.clone(); labels[:, :seed.size(1)] = -100
-            T = inp.size(1)
-
-            if _has_lopa_step:
-                out = getattr(model, "lopa_step_logits")(
-                    input_ids=inp,
-                    prefix_len=L_all,
-                    past_key_values=combined,
-                    attention_mask_total_len=L_all + T,
-                    logits_to_keep=T,
-                    labels=labels,
-                )
-            else:
-                out = _lopa_step_logits_fallback(inp, L_all, combined, L_all + T, labels)
-            if out.loss is not None and torch.isfinite(out.loss):
-                losses.append(out.loss)
-        if not losses:
-            return torch.tensor(float('nan'), device=device)
-        return torch.stack(losses, dim=0).mean()
-
-    # wandb
+    # wandb (optional)
     run = None
     if accelerator.is_main_process and args.wandb_project:
         try:
             import wandb
-            run = wandb.init(project=args.wandb_project, name=f"lopa_custom-K{K}", config=vars(args))
+            run = wandb.init(project=args.wandb_project, name=f"lopa_strict_zero_pad-K{K}", config=vars(args))
         except Exception:
             run = None
 
@@ -703,41 +590,47 @@ def train(args):
     for epoch in range(1, args.epochs + 1):
         model.train()
         tr_loss_sum, tr_count = 0.0, 0
-        skipped_train = 0
         train_iter = tqdm(dl_train, desc=f"Epoch {epoch} [train]", leave=False) if accelerator.is_main_process else dl_train
 
         for bidx, batch in enumerate(train_iter):
             items = list(batch) if isinstance(batch, list) else [batch]
-            if not items: continue
+            if not items:
+                continue
+
             step_losses = []
             valid = 0
+            # 응답 순차 모드 플래그
+            RESP_SEQ = bool(getattr(args, "responses_sequential", True))
 
             for it in items:
-                try:
-                    if len(it) == 4 and isinstance(it[3], list):
-                        qid, q, d, rs = it
-                        loss_i = compute_loss_on_group(str(qid), q, d, rs, debug=(epoch==1 and bidx==0))
-                    elif len(it) == 4:
-                        qid, q, d, r = it
-                        loss_i = compute_loss_on_sample(q, d, r, debug=(epoch==1 and bidx==0))
+                # it = (qid, q, d, responses) | (qid, q, d, r) | (q, d, r)
+                if len(it) == 4 and isinstance(it[3], list):
+                    qid, q, d, rs = it
+                    if RESP_SEQ:
+                        # 응답별 순차 backward (여기서는 backward 이미 수행됨)
+                        loss_val = compute_loss_on_group_seq(str(qid), q, d, rs)
+                        step_losses.append(loss_val)
+                        valid += 1
+                        # 순차 모드에서는 여기서 backward가 끝났으므로 추가 backward 없음
+                        continue
                     else:
-                        q, d, r = it
-                        loss_i = compute_loss_on_sample(q, d, r, debug=(epoch==1 and bidx==0))
-                except Exception as e:
-                    print(f"[Warn] skip item: {e}")
-                    continue
+                        # 기존 mean 경로: 한 번만 backward
+                        loss_i = compute_loss_on_group_mean(str(qid), q, d, rs)
+                elif len(it) == 4:
+                    qid, q, d, r = it
+                    loss_i = compute_loss_on_sample(q, d, r)
+                else:
+                    q, d, r = it
+                    loss_i = compute_loss_on_sample(q, d, r)
 
-                if not torch.isfinite(loss_i):
-                    skipped_train += 1; continue
-
+                # 기존 경로(=mean or single response)만 여기서 backward
                 accelerator.backward(loss_i / max(1, args.batch_size))
                 step_losses.append(float(loss_i.detach().item()))
                 valid += 1
 
             if valid > 0:
                 if float(args.grad_clip) and args.grad_clip > 0:
-                    try: accelerator.clip_grad_norm_(model.parameters(), args.grad_clip)
-                    except Exception: pass
+                    accelerator.clip_grad_norm_(model.parameters(), args.grad_clip)
                 optim.step(); scheduler.step()
                 tr_loss_sum += sum(step_losses); tr_count += valid
             optim.zero_grad(set_to_none=True)
@@ -747,7 +640,7 @@ def train(args):
                     lr = float(scheduler.get_last_lr()[0])
                 except Exception:
                     lr = optim.param_groups[0]["lr"]
-                payload = {"step": global_step, "lr": lr, "train/n_item": valid, "train/skipped": len(items)-valid}
+                payload = {"step": global_step, "lr": lr, "train/n_item": valid}
                 if step_losses: payload["train/step_loss_mean"] = sum(step_losses)/len(step_losses)
                 run.log(payload)
             global_step += 1
@@ -757,91 +650,83 @@ def train(args):
         # ---- validation ----
         model.eval()
         va_loss_sum, va_count = 0.0, 0
-        skipped_valid = 0
         with torch.no_grad():
             for batch in dl_val:
                 items = list(batch) if isinstance(batch, list) else [batch]
                 if not items: continue
                 for it in items:
-                    try:
-                        if len(it) == 4 and isinstance(it[3], list):
-                            qid, q, d, rs = it
-                            loss_i = compute_loss_on_group(str(qid), q, d, rs, debug=False)
-                        elif len(it) == 4:
-                            qid, q, d, r = it
-                            loss_i = compute_loss_on_sample(q, d, r, debug=False)
-                        else:
-                            q, d, r = it
-                            loss_i = compute_loss_on_sample(q, d, r, debug=False)
-                    except Exception:
-                        continue
-                    if not torch.isfinite(loss_i):
-                        skipped_valid += 1; continue
+                    if len(it) == 4 and isinstance(it[3], list):
+                        qid, q, d, rs = it
+                        # 검증은 항상 mean으로
+                        loss_i = compute_loss_on_group_mean(str(qid), q, d, rs)
+                    elif len(it) == 4:
+                        qid, q, d, r = it
+                        loss_i = compute_loss_on_sample(q, d, r)
+                    else:
+                        q, d, r = it
+                        loss_i = compute_loss_on_sample(q, d, r)
                     va_loss_sum += float(loss_i.detach().item()); va_count += 1
         va_avg = va_loss_sum / max(1, va_count)
 
         if accelerator.is_main_process:
-            print(f"[Epoch {epoch}] train_avg={tr_avg:.6f} | valid_avg={va_avg:.6f} | skipped(train={skipped_train}, valid={skipped_valid})")
+            print(f"[Epoch {epoch}] train_avg={tr_avg:.6f} | valid_avg={va_avg:.6f} | n_train={tr_count} | n_valid={va_count}")
             if run is not None:
-                run.log({"epoch": epoch, "train/avg": tr_avg, "valid/avg": va_avg,
-                         "train/skipped": skipped_train, "valid/skipped": skipped_valid})
+                run.log({"epoch": epoch, "train/avg": tr_avg, "valid/avg": va_avg})
 
         # ---- save best ----
-        if va_count > 0 and va_avg < best_loss:
+        if va_count > 0 and va_avg < best_loss and accelerator.is_main_process:
             best_loss = va_avg
-            if accelerator.is_main_process:
-                # clean dir
-                for p in best_dir.glob("*"):
-                    try:
-                        if p.is_file(): p.unlink()
-                        elif p.is_dir():
-                            import shutil; shutil.rmtree(p)
-                    except Exception: pass
-
-                base_dir = best_dir / "base"; base_dir.mkdir(parents=True, exist_ok=True)
+            # clean dir
+            for p in best_dir.glob("*"):
                 try:
-                    # unwrap for saving backbone & (optional) lora
-                    to_unwrap = accelerator.unwrap_model(model)
-                    is_peft = False
-                    try:
-                        from peft import PeftModel
-                        is_peft = isinstance(to_unwrap, PeftModel)
-                    except Exception:
-                        pass
-                    if is_peft:
-                        # clean backbone (without adapters)
-                        base_clean = LlamaForCausalLM.from_pretrained(
-                            args.model_name, torch_dtype=dtype, cache_dir=args.cache_dir_model
-                        )
-                        base_clean.save_pretrained(base_dir, safe_serialization=True)
-                        # save adapters
-                        (best_dir / "lora").mkdir(parents=True, exist_ok=True)
-                        to_unwrap.save_pretrained(best_dir / "lora")
-                    else:
-                        to_unwrap.save_pretrained(base_dir, safe_serialization=True)
-                except Exception as e:
-                    raise RuntimeError(f"Failed to save best: {e}")
+                    if p.is_file(): p.unlink()
+                    elif p.is_dir():
+                        import shutil; shutil.rmtree(p)
+                except Exception:
+                    pass
 
-                try: tokenizer.save_pretrained(best_dir)
-                except Exception: pass
-
+            base_dir = best_dir / "base"; base_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                to_unwrap = accelerator.unwrap_model(model)
+                # PEFT 여부
+                is_peft = False
                 try:
-                    if getattr(accelerator.unwrap_model(model), "generation_config", None) is not None:
-                        accelerator.unwrap_model(model).generation_config.to_json_file(str(best_dir / "generation_config.json"))
-                except Exception: pass
+                    from peft import PeftModel
+                    is_peft = isinstance(to_unwrap, PeftModel)
+                except Exception:
+                    pass
+                if is_peft:
+                    base_clean = LlamaForCausalLM.from_pretrained(
+                        args.model_name, torch_dtype=dtype, cache_dir=args.cache_dir_model
+                    )
+                    base_clean.save_pretrained(base_dir, safe_serialization=True)
+                    (best_dir / "lora").mkdir(parents=True, exist_ok=True)
+                    to_unwrap.save_pretrained(best_dir / "lora")
+                else:
+                    to_unwrap.save_pretrained(base_dir, safe_serialization=True)
+            except Exception as e:
+                raise RuntimeError(f"Failed to save best: {e}")
 
-                print(f"[Best] Saved to {best_dir} (val={best_loss:.6f})")
+            try:
+                tokenizer.save_pretrained(best_dir)
+                with open(best_dir / "rope_mode.txt", "w") as f:
+                    f.write(f"rope_mode={rope_mode}\n")
+                    f.write(f"upper_zero_pad_prefix={upper_zero}\n")
+                    f.write(f"prefill_layers={K}\n")
+            except Exception:
+                pass
+
+            print(f"[Best] Saved to {best_dir} (val={best_loss:.6f})")
 
         accelerator.wait_for_everyone()
 
     # push to hub
     if accelerator.is_main_process and args.push_to_hub and args.hf_repo_id:
         token = os.environ.get("HF_TOKEN", "")
-        if not token:
-            raise ValueError("HF_TOKEN not set; export HF_TOKEN=...")
+        _require(bool(token), "HF_TOKEN not set; export HF_TOKEN=...")
         create_repo(args.hf_repo_id, exist_ok=True, private=args.private_repo, token=token)
         upload_folder(repo_id=args.hf_repo_id, folder_path=str(best_dir),
-                      token=token, commit_message="LoPA trainer (custom modeling) upload", allow_patterns=["*"])
+                      token=token, commit_message="LoPA trainer (strict global+zero-pad, seq responses) upload", allow_patterns=["*"])
         print(f"✅ Uploaded to Hub: {args.hf_repo_id}")
 
 
