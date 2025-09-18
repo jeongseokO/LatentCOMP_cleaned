@@ -1,0 +1,4 @@
+[Unified] Training method: lopa
+CutGen: False
+[DEBUG] modeling_llama path: /workspace/LatentCOMP_cleaned/lopa_llama_modeling.py
+[DEBUG] TRI bound: {'tri_prefill_system_all': True, 'tri_prefill_user_lower': True, 'tri_build_caches': True, 'tri_forward_assistant': True} {'tri_build_caches': True, 'tri_forward_assistant': True, 'tri_step_logits': True}
