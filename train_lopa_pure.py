@@ -1,59 +1,134 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-LoPA-only trainer (Phase-1: lower-K prefill only; Phase-2: generation starting at assistant header)
+LoPA-only trainer (TRI pipeline, PEFT-safe, balanced mode, FIXED teacher forcing)
 
-Behavior:
-- Prefill builds KV only for lower K layers from [system + document]; upper layers have no prefill KV.
-- Assistant header is NOT included in prefill; it is pushed as the first token(s) of generation.
-- Positions are unchanged (no remapping). Lower layers start with len=L_sys+L_doc; upper layers start with len=0 and grow.
+Balanced(수정 요지):
+- System/User(S/U): grad 유지 (응답마다 프리필을 grad로 재계산 → 그래프 공유 없음)
+- Assistant: [header + content]를 **한 번에** teacher forcing (write_cache=True)
+  * header 구간은 labels=-100로 손실 제외
+  * 같은 호출 안에서 KV가 연결되므로 Assistant 토큰이 **S/U/헤더**를 실제 참조
 
-This trainer is intentionally minimal and focused. It uses:
-- HF AutoModelForCausalLM (trust_remote_code=False) + optional LoRA via peft
-- A single-device loop (Accelerate not required here); integrate with Slurm outside if needed
-- JSONL dataset with fields: question (str), document (str), optional response(s)
-
-Outputs:
-- best/ folder with base/ (clean backbone) and lora/ (adapter) + tokenizer & configs
-Downstream LatentCOMP_cleaned/train.py repack step will inject remote-code wrappers if configured.
+추가:
+- --max_response_tokens (기본 1024): 응답(assistant) 토큰 길이 상한
+  * assistant_delta = assistant_delta[:, :MAX_R] 로 cap
+  * cap 후 길이 < 2이면(shift loss 불가) 해당 응답 스킵/0-loss
 """
-from __future__ import annotations
 
+from __future__ import annotations
 import argparse
 import json
 import os
 import random
 from pathlib import Path
 from typing import List, Optional, Tuple
+from copy import copy
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, random_split
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers import get_cosine_schedule_with_warmup
 from tqdm import tqdm
+
 from accelerate import Accelerator
 try:
     from accelerate import FullyShardedDataParallelPlugin, DeepSpeedPlugin
 except Exception:
     FullyShardedDataParallelPlugin = None
     DeepSpeedPlugin = None
-from huggingface_hub import create_repo, upload_folder
-from transformers.cache_utils import DynamicCache
 
-# Safety: avoid HF tokenizers parallel threads before forking (DataLoader workers)
+from transformers import AutoTokenizer, get_cosine_schedule_with_warmup
+
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 
-def set_seed(seed: int):
-    random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+# -----------------------
+# STRICT helpers
+# -----------------------
+def _require(cond: bool, msg: str):
+    if not cond:
+        raise RuntimeError(msg)
+
+def _get_inner_model(m):
+    if hasattr(m, "module"):
+        m = m.module
+    return m
+
+def _unwrap_peft(m):
+    try:
+        from peft import PeftModel
+        if isinstance(m, PeftModel):
+            try:
+                m = m.get_base_model()
+            except Exception:
+                m = getattr(m, "base_model", m)
+    except Exception:
+        pass
+    return m
+
+def _infer_lora_targets_from_model(model: nn.Module) -> list[str]:
+    want = {"q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"}
+    seen = set()
+    for name, _m in model.named_modules():
+        base = name.split(".")[-1]
+        if base in want:
+            seen.add(base)
+    if not seen:
+        for name, m in model.named_modules():
+            if isinstance(m, nn.Linear):
+                base = name.split(".")[-1]
+                for w in want:
+                    if w in base:
+                        seen.add(w)
+    return sorted(seen)
 
 
+# -----------------------
+# Custom modeling injection (TRI, STRICT)
+# -----------------------
+def load_custom_llama_modeling_TRI(modeling_path: Path):
+    """
+    Load local `lopa_llama_modeling.py` as `transformers.models.llama.modeling_llama`.
+    Also verifies TRI APIs are present.
+    """
+    import importlib.util, sys
+    import transformers
+    import transformers.models.llama as llama_pkg
+
+    target_name = "transformers.models.llama.modeling_llama"
+    sys.modules.pop(target_name, None)
+
+    spec = importlib.util.spec_from_file_location(target_name, str(modeling_path))
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Failed to load spec for {modeling_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[target_name] = module
+    spec.loader.exec_module(module)
+
+    setattr(llama_pkg, "modeling_llama", module)
+
+    for a in ("LlamaModel", "LlamaForCausalLM"):
+        _require(hasattr(module, a), f"Patched module missing `{a}` in {modeling_path}")
+
+    need_LM = ["tri_prefill_system_all", "tri_prefill_user_lower", "tri_build_caches", "tri_forward_assistant"]
+    for n in need_LM:
+        _require(hasattr(module.LlamaModel, n), f"Patched LlamaModel lacks `{n}`")
+
+    need_TOP = ["tri_build_caches", "tri_forward_assistant", "tri_step_logits"]
+    for n in need_TOP:
+        _require(hasattr(module.LlamaForCausalLM, n), f"Patched LlamaForCausalLM lacks `{n}`")
+
+    print("[DEBUG] modeling_llama path:", modeling_path)
+    print("[DEBUG] TRI bound:",
+          {n: hasattr(module.LlamaModel, n) for n in need_LM},
+          {n: hasattr(module.LlamaForCausalLM, n) for n in need_TOP})
+    return module
+
+
+# -----------------------
+# Argparser
+# -----------------------
 def build_argparser():
-    p = argparse.ArgumentParser("LoPA-only trainer (lower-K prefill, header-start generation)")
+    p = argparse.ArgumentParser("LoPA trainer (TRI pipeline, balanced)")
     # core
     p.add_argument("--model_name", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct")
     p.add_argument("--data_file", type=str, required=True)
@@ -61,178 +136,169 @@ def build_argparser():
     p.add_argument("--batch_size", type=int, default=1)
     p.add_argument("--lr", type=float, default=5e-5)
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--prefill_layers", type=int, default=4)
+    p.add_argument("--prefill_layers", type=int, default=16, help="K (lower layers) used for User prefill")
+
+    # modeling file
+    p.add_argument("--lopa_modeling_path", type=str, default="lopa_llama_modeling.py",
+                   help="Path to TRI-enabled modeling_llama.py")
 
     # LoRA (optional)
-    p.add_argument("--use_lora", type=str, default="True")
-    p.add_argument("--lora_r", type=int, default=4)
-    p.add_argument("--lora_alpha", type=int, default=8)
+    p.add_argument("--use_lora", action="store_true")
+    p.add_argument("--lora_r", type=int, default=16)
+    p.add_argument("--lora_alpha", type=int, default=256)
     p.add_argument("--lora_dropout", type=float, default=0.05)
+    p.add_argument("--lora_targets", nargs="*",
+                   default=["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"])
 
     # backend
-    p.add_argument("--attn_impl", type=str, choices=["sdpa", "eager"], default="sdpa")
-    # numeric controls
+    p.add_argument("--attn_impl", type=str, choices=["eager", "sdpa", "flash_attention_2"], default="flash_attention_2")
+
+    # dtype
     p.add_argument("--dtype", type=str, choices=["auto","bf16","fp16","fp32"], default="auto",
-                   help="Force compute dtype (auto=bf16 if supported else fp16; cpu=fp32)")
-    p.add_argument("--no_tf32", action="store_true", help="Disable TF32 matmul/cuDNN")
-    p.add_argument("--sdpa_math_only", action="store_true", help="Use SDPA math kernel only (disable flash/mem-e)")
-    # schedule / clip
+                   help="auto=bf16(if supported) else fp16 on CUDA; fp32 on CPU")
+    p.add_argument("--no_tf32", action="store_true")
+    p.add_argument("--sdpa_math_only", action="store_true")
+
+    # schedule/clip
     p.add_argument("--warmup_steps", type=int, default=0)
     p.add_argument("--warmup_ratio", type=float, default=0.05)
     p.add_argument("--grad_clip", type=float, default=1.0)
+
+    # data
+    p.add_argument("--max_doc_tokens", type=int, default=2048)
+    p.add_argument("--max_response_tokens", type=int, default=1024,   # ★ 추가: 응답 길이 상한
+                   help="cap assistant tokens per sample to this many tokens")
+    p.add_argument("--explode", action="store_true", default=True)
+    p.add_argument("--no_explode", dest="explode", action="store_false")
+    p.add_argument("--group_by_question", action="store_true", default=True)
+    p.add_argument("--no_group_by_question", dest="group_by_question", action="store_false")
 
     # IO
     p.add_argument("--save_best_dir", type=str, default="./_best_ckpt")
     p.add_argument("--cache_dir_model", type=str, default=None)
     p.add_argument("--cache_dir_tokenizer", type=str, default=None)
     p.add_argument("--wandb_project", type=str, default=None)
-    # HF Hub
-    p.add_argument("--hf_repo_id", type=str, default=None, help="repo id to upload best/ (e.g., user/repo)")
+
+    # hub
+    p.add_argument("--hf_repo_id", type=str, default=None)
+    p.add_argument("--hf_repo_org", type=str, default=None)
     p.add_argument("--push_to_hub", action="store_true")
     p.add_argument("--private_repo", action="store_true")
-    # distributed / sharding
+
+    # distributed
     p.add_argument("--dist_mode", type=str, choices=["ddp", "fsdp", "deepspeed"], default="ddp")
-    p.add_argument("--zero_stage", type=int, default=2, help="DeepSpeed ZeRO stage (if dist_mode=deepspeed)")
+    p.add_argument("--zero_stage", type=int, default=2)
+
+    # responses execution mode
+    p.add_argument("--responses_sequential", action="store_true", default=True,
+                   help="각 응답을 독립 그래프로 순차 학습(backward 포함)")
+    p.add_argument("--no_responses_sequential", dest="responses_sequential", action="store_false")
+
+    p.add_argument("--train_method", type=str, default="lopa")
     return p
 
 
+# -----------------------
+# Dataset & Template
+# -----------------------
 class QADataset(Dataset):
-    def __init__(self, path: str, tokenizer, max_doc_tokens: int = 2048):
+    def __init__(self, path: str, tokenizer, max_doc_tokens: int = 2048,
+                 explode: bool = True, group_by_question: bool = True, seed: int = 42):
         self.recs = []
+        rng = random.Random(int(seed))
+        auto_idx = 0
         with open(path, encoding="utf-8") as f:
             for line in f:
                 try:
                     rec = json.loads(line)
                 except Exception:
                     continue
-                q = rec.get("question", "").strip()
-                d = rec.get("document", "").strip()
+                q = (rec.get("question") or "").strip()
+                d = (rec.get("document") or "").strip()
                 if not q or not d:
                     continue
-                # quick filter by doc length
-                try:
-                    n_tok = len(tokenizer(d, add_special_tokens=False).input_ids)
-                except Exception:
-                    n_tok = 0
-                if n_tok <= max_doc_tokens:
-                    # pick single response string if present
-                    r = None
-                    if isinstance(rec.get("response"), str):
-                        r = rec["response"].strip()
-                    elif isinstance(rec.get("responses"), list) and rec["responses"]:
-                        r = str(rec["responses"][0]).strip()
-                    self.recs.append((q, d, r or ""))
+                qid = rec.get("question_id", rec.get("id", None))
+                if qid is None:
+                    qid = f"auto_{auto_idx}"; auto_idx += 1
+                try: qid = str(qid)
+                except Exception: qid = f"auto_{auto_idx}"; auto_idx += 1
 
-    def __len__(self):
-        return len(self.recs)
+                try: n_tok = len(tokenizer(d, add_special_tokens=False).input_ids)
+                except Exception: n_tok = 0
+                if n_tok > max_doc_tokens:
+                    continue
 
-    def __getitem__(self, idx):
-        return self.recs[idx]
+                cands: List[str] = []
+                rs = rec.get("responses")
+                if isinstance(rs, list):
+                    for s in rs:
+                        if isinstance(s, str) and s.strip():
+                            cands.append(s.strip())
+                r_single = rec.get("response")
+                if (not cands) and isinstance(r_single, str) and r_single.strip():
+                    cands = [r_single.strip()]
+                if not cands:
+                    continue
 
+                if group_by_question:
+                    self.recs.append((qid, q, d, cands))
+                else:
+                    if explode:
+                        for a in cands:
+                            self.recs.append((qid, q, d, a))
+                    else:
+                        self.recs.append((qid, q, d, cands[0]))
+
+    def __len__(self): return len(self.recs)
+    def __getitem__(self, idx): return self.recs[idx]
+
+def collate_identity(batch): return batch
 
 def build_messages(system: str, document: str, question: str, include_query: bool = True):
     user = f"Document:\n{document}\n\nQuestion: {question}" if include_query else f"Document:\n{document}\n\n"
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
-
 
 def apply_chat_template(tokenizer, messages, add_generation_prompt: bool):
     try:
         return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt)
     except TypeError:
         s = tokenizer.apply_chat_template(messages, tokenize=False)
-        if add_generation_prompt:
+        tmpl = getattr(tokenizer, "chat_template", "") or ""
+        if add_generation_prompt and "<|start_header_id|>" in tmpl:
             s += "<|start_header_id|>assistant<|end_header_id|>\n\n"
         return s
-
 
 def tokens_from_messages(tokenizer, messages, device, add_generation_prompt=False):
     s = apply_chat_template(tokenizer, messages, add_generation_prompt)
     return tokenizer(s, add_special_tokens=False, return_tensors="pt").input_ids.to(device)
 
-
-def pkv_len(pkv) -> int:
-    if hasattr(pkv, "key_cache"):
-        return len(pkv.key_cache)
-    if hasattr(pkv, "layers"):
-        return len(pkv.layers)
-    try:
-        return len(pkv)
-    except Exception:
-        return 0
+def lcp_len(a: torch.Tensor, b: torch.Tensor) -> int:
+    L = min(a.size(1), b.size(1))
+    eq = (a[0, :L] == b[0, :L])
+    nz = (~eq).nonzero(as_tuple=False)
+    return int(nz[0, 0]) if nz.numel() else L
 
 
-def pkv_get(pkv, idx: int):
-    if hasattr(pkv, "key_cache") and hasattr(pkv, "value_cache"):
-        return pkv.key_cache[idx], pkv.value_cache[idx]
-    if hasattr(pkv, "layers"):
-        layer = pkv.layers[idx]
-        return layer.keys, layer.values
-    return pkv[idx]
-
-
-def dc_from_subset(pkv_src, layer_indices: List[int]) -> DynamicCache:
-    dc = DynamicCache()
-    for li in layer_indices:
-        k, v = pkv_get(pkv_src, li)
-        dc.update(k, v, li)
-    return dc
-
-
-def _get_inner_model(m):
-    """Return the base model object that holds .layers (e.g., LlamaModel/MistralModel).
-    Handles Accelerate wrappers and PEFT.
-    """
-    # unwrap accelerate
-    if hasattr(m, "module"):
-        m = m.module
-    # unwrap peft
-    try:
-        from peft import PeftModel
-        if isinstance(m, PeftModel):
-            try:
-                base = m.get_base_model()
-            except Exception:
-                base = getattr(m, "base_model", m)
-            if hasattr(base, "model"):
-                return base.model
-            if hasattr(base, "transformer"):
-                return base.transformer
-            m = base
-    except Exception:
-        pass
-    # common HF layouts
-    if hasattr(m, "model") and hasattr(m.model, "layers"):
-        return m.model
-    if hasattr(m, "transformer") and hasattr(m.transformer, "layers"):
-        return m.transformer
-    raise AttributeError("Could not locate inner base model with a .layers attribute")
-
-
+# -----------------------
+# Accelerator builder
+# -----------------------
 def _build_accelerator(args) -> Accelerator:
-    # derive mixed precision from dtype option
-    if args.dtype == "bf16":
-        mp = "bf16"
-    elif args.dtype == "fp16":
-        mp = "fp16"
-    else:
-        mp = "no"
+    if args.dtype == "bf16": mp = "bf16"
+    elif args.dtype == "fp16": mp = "fp16"
+    else: mp = "no"
 
-    # Optional FSDP auto-wrap policy for transformer decoders
     auto_wrap = None
     try:
-        from transformers.models.llama.modeling_llama import LlamaDecoderLayer
-        from transformers.models.mistral.modeling_mistral import MistralDecoderLayer
-        auto_wrap = {"transformer_layer_cls_to_wrap": (LlamaDecoderLayer, MistralDecoderLayer)}
+        from transformers.models.llama.modeling_llama import LlamaDecoderLayer as _L
+        auto_wrap = {"transformer_layer_cls_to_wrap": (_L,)}
     except Exception:
         pass
 
     mode = getattr(args, "dist_mode", "ddp")
     if mode == "fsdp" and FullyShardedDataParallelPlugin is not None:
         fsdp = FullyShardedDataParallelPlugin(
-            sharding_strategy="FULL_SHARD",
-            cpu_offload=False,
-            limit_all_gathers=True,
-            use_orig_params=True,
+            sharding_strategy="FULL_SHARD", cpu_offload=False,
+            limit_all_gathers=True, use_orig_params=True,
             auto_wrap_policy=auto_wrap,
         )
         return Accelerator(mixed_precision=mp, fsdp_plugin=fsdp)
@@ -241,469 +307,406 @@ def _build_accelerator(args) -> Accelerator:
         return Accelerator(mixed_precision=mp, deepspeed_plugin=ds)
     return Accelerator(mixed_precision=mp)
 
+def _fork_cache_view(pkv):
+    """
+    DynamicCache 얕은 복제:
+      - 객체 shallow copy
+      - key_cache/value_cache 리스트만 새 리스트로 교체 (Tensor 참조는 동일)
+    """
+    new = copy(pkv)
+    if hasattr(pkv, "key_cache") and hasattr(pkv, "value_cache"):
+        new.key_cache  = list(pkv.key_cache)
+        new.value_cache = list(pkv.value_cache)
+    elif hasattr(pkv, "layers"):
+        new.layers = list(getattr(pkv, "layers") or [])
+    return new
 
+
+# -----------------------
+# Train (TRI, BALANCED+TF FIX)
+# -----------------------
 def train(args):
     accelerator = _build_accelerator(args)
-    set_seed(args.seed)
+    random.seed(args.seed); torch.manual_seed(args.seed); torch.cuda.manual_seed_all(args.seed)
     device = accelerator.device
 
-    # tokenizer
-    tok_src = args.model_name
-    tokenizer = AutoTokenizer.from_pretrained(
-        tok_src,
-        cache_dir=args.cache_dir_tokenizer,
-        use_fast=True,
-    )
+    # 1) Patch modeling BEFORE loading model
+    modeling_path = Path(getattr(args, "lopa_modeling_path", "lopa_llama_modeling.py")).resolve()
+    _require(modeling_path.exists(), f"lopa_modeling_path not found: {modeling_path}")
+    llama_mod = load_custom_llama_modeling_TRI(modeling_path)
+    LlamaForCausalLM = llama_mod.LlamaForCausalLM  # noqa
+
+    # 2) Tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name, cache_dir=args.cache_dir_tokenizer, use_fast=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    # model dtype selection
-    if args.dtype == "fp32":
-        dtype = torch.float32
-    elif args.dtype == "bf16":
-        dtype = torch.bfloat16
-    elif args.dtype == "fp16":
-        dtype = torch.float16
+    # 3) dtype
+    if args.dtype == "fp32": dtype = torch.float32
+    elif args.dtype == "bf16": dtype = torch.bfloat16
+    elif args.dtype == "fp16": dtype = torch.float16
     else:
-        dtype = (
-            torch.bfloat16 if (device == "cuda" and torch.cuda.is_bf16_supported()) else (
-                torch.float16 if device == "cuda" else torch.float32
-            )
-        )
-    # optional: disable TF32 / fix SDPA kernel for stability
-    if args.no_tf32 and torch.cuda.is_available():
+        dtype = (torch.bfloat16 if (device == "cuda" and torch.cuda.is_bf16_supported())
+                 else (torch.float16 if device == "cuda" else torch.float32))
+    # 권장: bf16
+    dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else dtype
+    if torch.cuda.is_available():
         try:
-            torch.backends.cuda.matmul.allow_tf32 = False
-            torch.backends.cudnn.allow_tf32 = False
+            torch.backends.cuda.matmul.allow_tf32 = not args.no_tf32
+            torch.backends.cudnn.allow_tf32 = not args.no_tf32
         except Exception:
             pass
-    if args.sdpa_math_only and torch.cuda.is_available():
-        try:
-            torch.backends.cuda.enable_flash_sdp(False)
-            torch.backends.cuda.enable_mem_efficient_sdp(False)
-            torch.backends.cuda.enable_math_sdp(True)
-        except Exception:
-            pass
-
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model_name,
-        trust_remote_code=False,
-        torch_dtype=dtype,
-        cache_dir=args.cache_dir_model,
-    )
-    # attn backend — force eager for all models (stability first)
-    impl = "eager"
-    if accelerator.is_main_process:
-        print("[Note] Forcing attn_implementation='eager' for all models (stability mode).")
-    for k in ("attn_implementation", "_attn_implementation"):
-        try:
-            setattr(model.config, k, impl)
+        if args.sdpa_math_only:
             try:
-                setattr(_get_inner_model(model).config, k, impl)
+                torch.backends.cuda.enable_flash_sdp(False)
+                torch.backends.cuda.enable_mem_efficient_sdp(False)
+                torch.backends.cuda.enable_math_sdp(True)
             except Exception:
                 pass
-        except Exception:
-            pass
 
-    # LoRA
-    use_lora = str(args.use_lora).lower() in ("1", "true", "yes", "y")
+    # 4) Model
+    model = LlamaForCausalLM.from_pretrained(args.model_name, torch_dtype=dtype, cache_dir=args.cache_dir_model)
+
+    # 5) Attention impl
+    impl = args.attn_impl
+    try:
+        model.config._attn_implementation = impl
+        _get_inner_model(model).model.config._attn_implementation = impl
+    except Exception:
+        pass
+    if accelerator.is_main_process:
+        print(f"[Info] attn_implementation = {impl}")
+
+    # 6) TRI instance-level checks
+    for need in ("tri_build_caches", "tri_forward_assistant", "tri_step_logits"):
+        _require(hasattr(model, need), f"LlamaForCausalLM instance lacks `{need}`. TRI injection failed.")
+
+    # 7) LoRA (optional)
+    use_lora = bool(getattr(args, "use_lora", False))
     if use_lora:
-        try:
-            from peft import LoraConfig, get_peft_model, TaskType
-            lcfg = LoraConfig(
-                r=int(args.lora_r),
-                lora_alpha=int(args.lora_alpha),
-                lora_dropout=float(args.lora_dropout),
-                bias="none",
-                task_type=TaskType.CAUSAL_LM,
-                target_modules=["q_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj"],
-            )
-            model = get_peft_model(model, lcfg)
-            # base frozen; LoRA params trainable
-        except Exception as e:
-            raise RuntimeError(f"peft not available or failed to init LoRA: {e}")
-    else:
-        for p in model.parameters():
-            p.requires_grad = True
+        from peft import LoraConfig, get_peft_model, TaskType
+        cli_targets = list(getattr(args, "lora_targets", []))
+        if not cli_targets:
+            core = _unwrap_peft(_get_inner_model(model))
+            found = _infer_lora_targets_from_model(core)
+            cli_targets = found or ["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"]
 
-    # data
-    ds_all = QADataset(args.data_file, tokenizer)
+        if getattr(Accelerator(), "is_main_process", True):
+            print(f"[LoRA] target_modules = {cli_targets}")
+
+        lcfg = LoraConfig(
+            r=int(args.lora_r),
+            lora_alpha=int(args.lora_alpha),
+            lora_dropout=float(args.lora_dropout),
+            bias="none",
+            task_type=TaskType.CAUSAL_LM,
+            target_modules=cli_targets,
+        )
+        model = get_peft_model(model, lcfg)
+
+    # 8) Data
+    ds_all = QADataset(args.data_file, tokenizer,
+                       max_doc_tokens=int(args.max_doc_tokens),
+                       explode=bool(args.explode),
+                       group_by_question=bool(args.group_by_question),
+                       seed=int(args.seed))
+    _require(len(ds_all) > 0, f"Dataset empty after filters: {args.data_file}")
+
     val_size = max(1, int(0.1 * len(ds_all)))
     train_size = max(1, len(ds_all) - val_size)
     train_set, val_set = random_split(ds_all, [train_size, val_size])
     pin_mem = torch.cuda.is_available()
-    dl_train = DataLoader(
-        train_set,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=4,
-        pin_memory=pin_mem,
-        persistent_workers=True if 4 > 0 else False,
-        multiprocessing_context="forkserver",
-    )
-    dl_val = DataLoader(
-        val_set,
-        batch_size=1,
-        shuffle=False,
-        num_workers=2,
-        pin_memory=pin_mem,
-        persistent_workers=True if 2 > 0 else False,
-        multiprocessing_context="forkserver",
-    )
+    dl_train = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4,
+                          pin_memory=pin_mem, persistent_workers=True, collate_fn=collate_identity)
+    dl_val = DataLoader(val_set, batch_size=1, shuffle=False, num_workers=2,
+                        pin_memory=pin_mem, persistent_workers=True, collate_fn=collate_identity)
 
     optim = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=args.lr)
-
-    # Prepare with accelerate
     model, optim, dl_train, dl_val = accelerator.prepare(model, optim, dl_train, dl_val)
-    # --- Diagnostics: print compute dtype / backend flags (main process only)
+
     if accelerator.is_main_process:
         try:
             dev_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else str(device)
         except Exception:
             dev_name = str(device)
-        try:
-            param_dtype = next(model.parameters()).dtype
-        except Exception:
-            param_dtype = None
-        try:
-            bf16_ok = torch.cuda.is_bf16_supported() if torch.cuda.is_available() else False
-        except Exception:
-            bf16_ok = False
-        try:
-            tf32_matmul = torch.backends.cuda.matmul.allow_tf32 if torch.cuda.is_available() else False
-            tf32_cudnn  = torch.backends.cudnn.allow_tf32 if torch.cuda.is_available() else False
-        except Exception:
-            tf32_matmul, tf32_cudnn = None, None
-        try:
-            flash = torch.backends.cuda.flash_sdp_enabled() if torch.cuda.is_available() else None
-            mem_e = torch.backends.cuda.mem_efficient_sdp_enabled() if torch.cuda.is_available() else None
-            math  = torch.backends.cuda.math_sdp_enabled() if torch.cuda.is_available() else None
-        except Exception:
-            flash = mem_e = math = None
         print("[Env] torch:", torch.__version__, "cuda:", torch.version.cuda)
-        print("[Env] device:", dev_name)
-        print("[Env] requested dtype:", dtype, "| actual param dtype:", param_dtype, "| bf16_support:", bf16_ok)
-        print("[Env] TF32 matmul:", tf32_matmul, "cudnn:", tf32_cudnn)
-        print("[Env] SDPA flags → flash:", flash, "mem_efficient:", mem_e, "math:", math)
-    # Scheduler: cosine with warmup
+        print("[Env] device:", dev_name, "| param dtype:", next(_get_inner_model(model).parameters()).dtype)
+
     total_train_steps = args.epochs * max(1, len(dl_train))
     warmup_steps = args.warmup_steps if int(args.warmup_steps) > 0 else int(args.warmup_ratio * total_train_steps)
-    scheduler = get_cosine_schedule_with_warmup(
-        optimizer=optim,
-        num_warmup_steps=max(0, warmup_steps),
-        num_training_steps=max(1, total_train_steps),
-    )
+    scheduler = get_cosine_schedule_with_warmup(optimizer=optim,
+                                                num_warmup_steps=max(0, warmup_steps),
+                                                num_training_steps=max(1, total_train_steps))
 
-    system_prompt = "You are a helpful assistant that answers questions based on the given document. "
-    K = max(0, int(args.prefill_layers))
+    system_prompt = "You are a helpful assistant that answers questions based on the given document."
+    K = max(0, int(args.prefill_layers))  # lower_k
+    MAX_R = max(1, int(getattr(args, "max_response_tokens", 1024)))
+
+    # -----------------------
+    # Chat-template TRI helpers
+    # -----------------------
+    def _build_segments(q: str, d: str):
+        """S_ids, SU_ids, SU_gen, user_delta, assistant_header_delta"""
+        msgs = build_messages(system_prompt, d, q, include_query=True)
+        S_ids = tokens_from_messages(tokenizer, msgs[:1], accelerator.device, add_generation_prompt=False)
+        SU_ids = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=False)
+        SU_gen = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=True)
+
+        l_su = lcp_len(S_ids, SU_ids)
+        user_delta = SU_ids[:, l_su:SU_ids.size(1)]
+        assistant_header_delta = SU_gen[:, SU_ids.size(1):]  # header only
+        return msgs, S_ids, SU_ids, SU_gen, user_delta, assistant_header_delta
+
+    def _assistant_content_delta(msgs, resp: str, SU_gen_ids):
+        msgs_ass = msgs + [{"role": "assistant", "content": resp}]
+        full_ids = tokens_from_messages(tokenizer, msgs_ass, accelerator.device, add_generation_prompt=False)
+        assistant_delta = full_ids[:, SU_gen_ids.size(1):]
+        # ★ 응답 길이 cap
+        if assistant_delta.size(1) > MAX_R:
+            assistant_delta = assistant_delta[:, :MAX_R]
+        return assistant_delta
+
+    # -----------------------
+    # Core losses (teacher forcing: header+content, write_cache=True)
+    # -----------------------
+    def _tf_call(pkv, S_len: int, U_len: int, header_delta: torch.Tensor, assistant_delta: torch.Tensor):
+        """header+content를 한 번에 teacher forcing (write_cache=True) + cap 재확인"""
+        if assistant_delta.size(1) > MAX_R:
+            assistant_delta = assistant_delta[:, :MAX_R]  # 이중 안전망
+        # shift loss를 위해 최소 2토큰 필요
+        if assistant_delta.size(1) < 2:
+            return None  # 호출측에서 스킵 처리
+        inp = torch.cat([header_delta, assistant_delta], dim=1)          # [H + A]
+        labels = inp.clone()
+        labels[:, :header_delta.size(1)] = -100                           # header는 로스 제외
+        out = model.tri_step_logits(
+            assistant_ids=inp, lower_k=K, pkv=pkv, S=S_len, U=U_len,
+            logits_to_keep=inp.size(1), labels=labels, write_cache=True
+        )
+        return out
 
     def compute_loss_on_sample(q: str, d: str, resp: str) -> torch.Tensor:
-        # messages
-        msgs = build_messages(system_prompt, d, q, include_query=True)
-        ids_phase1 = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=False)  # [1, L_sys+doc]
-        ids_hdr    = tokens_from_messages(tokenizer, msgs, device, add_generation_prompt=True)   # [1, L_sys+doc+header]
-        sys_only   = tokens_from_messages(tokenizer, [{"role":"system", "content":system_prompt}], device, add_generation_prompt=False)
+        msgs, S_ids, SU_ids, SU_gen, user_delta, header_delta = _build_segments(q, d)
 
-        L_sys = sys_only.size(1)
-        L_all = ids_phase1.size(1)
-        L_doc = L_all - L_sys
-        assert L_doc > 0
+        # (1) S/U 프리필 — grad ON (응답별 독립 그래프)
+        pkv_su, S_len, U_len = model.tri_build_caches(system_ids=S_ids, user_ids=user_delta, lower_k=K)
 
-        # Phase-1: system-only prefill (all layers)
-        inner = _get_inner_model(model)
+        # (2) Assistant delta 구성 (+ cap)
+        assistant_delta = _assistant_content_delta(msgs, resp, SU_gen)
+        if assistant_delta.size(1) < 2:
+            # 유효 라벨이 부족 → 0-loss 반환(학습 영향 없음)
+            return torch.zeros((), device=accelerator.device, dtype=torch.float32)
+
+        # (3) header+content 한 번에 teacher forcing
+        out = _tf_call(pkv_su, S_len, U_len, header_delta, assistant_delta)
+        if out is None or out.loss is None:
+            return torch.zeros((), device=accelerator.device, dtype=torch.float32)
+        return out.loss
+
+    def compute_loss_on_group_mean(qid: str, q: str, d: str, responses: List[str]) -> torch.Tensor:
+        # 검증/평가: no-grad
+        losses = []
         with torch.no_grad():
-            out_sys = inner(
-                input_ids=sys_only,
-                attention_mask=torch.ones_like(sys_only),
-                use_cache=True,
-                return_dict=True,
-            )
-        pkv_sys = out_sys.past_key_values
-        n_layers = pkv_len(pkv_sys)
-        K_eff = max(0, min(K, n_layers))
+            msgs, S_ids, SU_ids, SU_gen, user_delta, header_delta = _build_segments(q, d)
+            for resp in responses:
+                if not isinstance(resp, str) or not resp.strip(): continue
+                pkv_su, S_len, U_len = model.tri_build_caches(S_ids, user_delta, lower_k=K)
+                ad = _assistant_content_delta(msgs, resp, SU_gen)
+                if ad.size(1) < 2:  # cap 이후 too short
+                    continue
+                out = _tf_call(pkv_su, S_len, U_len, header_delta, ad)
+                if out is not None and out.loss is not None and torch.isfinite(out.loss):
+                    losses.append(out.loss.detach())
+        _require(len(losses) > 0, "All responses invalid/empty for this item.")
+        return torch.stack(losses, dim=0).mean()
 
-        # Phase-1: doc pass only for lower-K layers
-        full_layers: nn.ModuleList = inner.layers
-        lower_layers = nn.ModuleList([full_layers[i] for i in range(0, K_eff)])
-        inner.layers = lower_layers
-        dc_low_in = dc_from_subset(pkv_sys, list(range(K_eff))) if K_eff > 0 else DynamicCache()
-        attn_doc_full = torch.cat([
-            torch.ones(1, L_sys, device=device, dtype=torch.long),
-            torch.ones(1, L_doc, device=device, dtype=torch.long)
-        ], dim=1)
-        with torch.no_grad():
-            out_low = inner(
-                input_ids=ids_phase1[:, L_sys:],
-                past_key_values=dc_low_in,
-                attention_mask=attn_doc_full,
-                use_cache=True,
-                return_dict=True,
-            )
-        pkv_low = out_low.past_key_values
-        inner.layers = full_layers
+    def compute_loss_on_group_seq(qid: str, q: str, d: str, responses: List[str]) -> float:
+        msgs, S_ids, SU_ids, SU_gen, user_delta, header_delta = _build_segments(q, d)
 
-        # Combine caches: lower => sys+doc; upper => no sys/no doc (start empty and grow from header)
-        combined = DynamicCache()
-        for li in range(n_layers):
-            k_sys, v_sys = pkv_get(pkv_sys, li)
-            if li < K_eff:
-                k_sys_slice = k_sys[:, :, :L_sys, :]
-                v_sys_slice = v_sys[:, :, :L_sys, :]
-                k_low, v_low = pkv_get(pkv_low, li)
-                k_doc = k_low[:, :, -L_doc:, :]
-                v_doc = v_low[:, :, -L_doc:, :]
-                k_cat = torch.cat([k_sys_slice, k_doc], dim=2).contiguous()
-                v_cat = torch.cat([v_sys_slice, v_doc], dim=2).contiguous()
-                combined.update(k_cat, v_cat, li)
-            else:
-                # Upper layers start with empty past (no sys/doc); use zero-length slice
-                k_empty = k_sys[:, :, :0, :].contiguous()
-                v_empty = v_sys[:, :, :0, :].contiguous()
-                combined.update(k_empty, v_empty, li)
+        # 1) 유효 응답 수집(+cap, 길이 필터)
+        eligible = []
+        for resp in responses:
+            if not isinstance(resp, str) or not resp.strip(): continue
+            ad = _assistant_content_delta(msgs, resp, SU_gen)
+            if ad.size(1) < 2:  # cap 이후 too short → 스킵
+                continue
+            eligible.append(ad)
+        _require(len(eligible) > 0, "All responses invalid/empty for this item.")
 
-        # Build assistant continuation ids from response
-        msgs_ass = msgs + [{"role": "assistant", "content": resp}]
-        full_ids = tokens_from_messages(tokenizer, msgs_ass, device, add_generation_prompt=False)
-        # assistant ids = after header
-        assistant_ids = full_ids[:, ids_hdr.size(1):]
-        if assistant_ids.numel() == 0:
-            return torch.zeros((), device=device, dtype=torch.float32)
+        losses_for_log, eff_total = [], len(eligible)
+        bs = max(1, args.batch_size)
 
-        # Do NOT push header into past during training.
-        # Instead, include header as the first token(s) of the input and mask it out in labels
-        # so that the first predicted target is the first assistant token (A0).
-        hdr_tail = ids_hdr[:, L_all:]  # header-only sequence (could be multi-token)
-        inp = torch.cat([hdr_tail, assistant_ids], dim=1)  # [H, A0, A1, ...]
-        lab = inp.clone()  # 헤더도 라벨에 포함 → <header_start>가 'assistant'를 예측하도록 감독
+        for ad in eligible:
+            # (1) 응답별 fresh S/U 프리필 (grad ON)
+            pkv_su, S_len, U_len = model.tri_build_caches(system_ids=S_ids, user_ids=user_delta, lower_k=K)
 
-        attn_mask = torch.cat([
-            torch.ones(1, pkv_get(combined, 0)[0].shape[2], device=device, dtype=torch.long),
-            torch.ones(1, inp.size(1), device=device, dtype=torch.long)
-        ], dim=1)
+            # (2) header+content 한 번에 teacher forcing
+            out = _tf_call(pkv_su, S_len, U_len, header_delta, ad)
+            _require(out is not None and out.loss is not None and torch.isfinite(out.loss), "loss is NaN/inf")
+            lval = float(out.loss.detach().item())
+            losses_for_log.append(lval)
+            accelerator.backward(out.loss / eff_total / bs)
 
-        # Use HF standard CLM loss (handles 1-token shift internally). Header is ignored via -100.
-        def _forward_hf_loss():
-            out_local = model(
-                input_ids=inp,
-                past_key_values=combined,
-                attention_mask=attn_mask,
-                labels=lab,
-                use_cache=True,
-                return_dict=True,
-            )
-            return out_local.loss if out_local.loss is not None else None
+            del pkv_su, out
 
-        loss_val = _forward_hf_loss()
-        if (loss_val is None) or (not torch.isfinite(loss_val)):
-            # Fallback: force math SDPA for this batch
-            flash0 = mem0 = math0 = None
-            if torch.cuda.is_available():
-                try:
-                    flash0 = torch.backends.cuda.flash_sdp_enabled()
-                    mem0 = torch.backends.cuda.mem_efficient_sdp_enabled()
-                    math0 = torch.backends.cuda.math_sdp_enabled()
-                    torch.backends.cuda.enable_flash_sdp(False)
-                    torch.backends.cuda.enable_mem_efficient_sdp(False)
-                    torch.backends.cuda.enable_math_sdp(True)
-                except Exception:
-                    pass
-            loss_val = _forward_hf_loss()
-            if torch.cuda.is_available() and None not in (flash0, mem0, math0):
-                try:
-                    torch.backends.cuda.enable_flash_sdp(bool(flash0))
-                    torch.backends.cuda.enable_mem_efficient_sdp(bool(mem0))
-                    torch.backends.cuda.enable_math_sdp(bool(math0))
-                except Exception:
-                    pass
-        return loss_val if loss_val is not None else torch.zeros((), device=device, dtype=torch.float32)
-
-    # training loop
-    best_loss = float("inf")
-    best_dir = Path(args.save_best_dir)
-    best_dir.mkdir(parents=True, exist_ok=True)
+        return sum(losses_for_log) / eff_total
 
     # wandb (optional)
     run = None
     if accelerator.is_main_process and args.wandb_project:
         try:
             import wandb
-            run = wandb.init(project=args.wandb_project, name=f"lopa_pure-K{K}", config=vars(args))
+            run = wandb.init(project=args.wandb_project, name=f"lopa_tri_balanced_K{K}_R{MAX_R}", config=vars(args))
         except Exception:
             run = None
 
-    def _iter_items(batch):
-        # Support tuple-of-lists (default collate) and list-of-tuples
-        if isinstance(batch, (list, tuple)):
-            if len(batch) == 3 and all(isinstance(x, (list, tuple)) for x in batch):
-                return list(zip(*batch))
-            else:
-                return list(batch)
-        try:
-            q, d, r = batch
-            return [(q, d, r)]
-        except Exception:
-            return []
+    best_loss = float("inf")
+    best_dir = Path(args.save_best_dir); best_dir.mkdir(parents=True, exist_ok=True)
 
     global_step = 0
     for epoch in range(1, args.epochs + 1):
         model.train()
         tr_loss_sum, tr_count = 0.0, 0
-        train_nan_skipped = 0
-        train_iter = dl_train
-        if accelerator.is_main_process:
-            train_iter = tqdm(dl_train, desc=f"Epoch {epoch} [train]", leave=False)
-        for batch in train_iter:
-            items = _iter_items(batch)
+        train_iter = tqdm(dl_train, desc=f"Epoch {epoch} [train]", leave=False) if accelerator.is_main_process else dl_train
+
+        for bidx, batch in enumerate(train_iter):
+            items = list(batch) if isinstance(batch, list) else [batch]
             if not items:
                 continue
-            loss_accum = 0.0
-            loss_vals = []
-            valid_in_step = 0
-            for q, d, r in items:
-                loss_i = compute_loss_on_sample(q, d, r)
-                # Skip NaN/Inf losses
-                if not torch.isfinite(loss_i):
-                    train_nan_skipped += 1
-                    continue
-                loss_accum += float(loss_i.detach().item())
-                loss_vals.append(float(loss_i.detach().item()))
-                accelerator.backward(loss_i / max(1, args.batch_size))
-                valid_in_step += 1
-            if valid_in_step > 0:
-                # grad clip + step
+
+            step_losses = []
+            valid = 0
+            RESP_SEQ = bool(getattr(args, "responses_sequential", True))
+
+            for it in items:
+                if len(it) == 4 and isinstance(it[3], list):
+                    qid, q, d, rs = it
+                    if RESP_SEQ:
+                        loss_val = compute_loss_on_group_seq(str(qid), q, d, rs)  # 내부 backward
+                        step_losses.append(loss_val); valid += 1
+                        continue
+                    else:
+                        loss_i = compute_loss_on_group_mean(str(qid), q, d, rs)  # no grad
+                elif len(it) == 4:
+                    qid, q, d, r = it
+                    loss_i = compute_loss_on_sample(q, d, r)
+                    accelerator.backward(loss_i / max(1, args.batch_size))
+                else:
+                    q, d, r = it
+                    loss_i = compute_loss_on_sample(q, d, r)
+                    accelerator.backward(loss_i / max(1, args.batch_size))
+
+                step_losses.append(float(loss_i.detach().item())); valid += 1
+
+            if valid > 0:
                 if float(args.grad_clip) and args.grad_clip > 0:
-                    try:
-                        accelerator.clip_grad_norm_(model.parameters(), args.grad_clip)
-                    except Exception:
-                        pass
+                    accelerator.clip_grad_norm_(model.parameters(), args.grad_clip)
                 optim.step(); scheduler.step()
-                tr_loss_sum += loss_accum
-                tr_count += valid_in_step
-            # Always zero grads at step end
+                tr_loss_sum += sum(step_losses); tr_count += valid
             optim.zero_grad(set_to_none=True)
-            # step-level logging (per optimizer step)
+
             if accelerator.is_main_process and run is not None:
                 try:
-                    step_loss = (sum(loss_vals) / max(1, len(loss_vals))) if loss_vals else None
-                    # fetch current lr
-                    try:
-                        lr = float(scheduler.get_last_lr()[0])
-                    except Exception:
-                        lr = optim.param_groups[0]["lr"]
-                    payload = {"step": global_step, "lr": lr, "train/nan_skipped_step": (len(items) - valid_in_step)}
-                    if step_loss is not None:
-                        payload["train/step_loss"] = step_loss
-                    run.log(payload)
+                    lr = float(scheduler.get_last_lr()[0])
                 except Exception:
-                    pass
+                    lr = optim.param_groups[0]["lr"]
+                payload = {"step": global_step, "lr": lr, "train/n_item": valid}
+                if step_losses: payload["train/step_loss_mean"] = sum(step_losses)/len(step_losses)
+                run.log(payload)
             global_step += 1
+
         tr_avg = tr_loss_sum / max(1, tr_count)
 
-        # validation
+        # ---- validation ----
         model.eval()
         va_loss_sum, va_count = 0.0, 0
-        val_nan_skipped = 0
         with torch.no_grad():
             for batch in dl_val:
-                items = _iter_items(batch)
-                if not items:
-                    continue
-                for q, d, r in items:
-                    loss_i = compute_loss_on_sample(q, d, r)
-                    if not torch.isfinite(loss_i):
-                        val_nan_skipped += 1
-                        continue
-                    va_loss_sum += float(loss_i.detach().item())
-                    va_count += 1
+                items = list(batch) if isinstance(batch, list) else [batch]
+                if not items: continue
+                for it in items:
+                    if len(it) == 4 and isinstance(it[3], list):
+                        qid, q, d, rs = it
+                        loss_i = compute_loss_on_group_mean(str(qid), q, d, rs)
+                    elif len(it) == 4:
+                        qid, q, d, r = it
+                        loss_i = compute_loss_on_sample(q, d, r)  # eval에서도 같은 경로
+                    else:
+                        q, d, r = it
+                        loss_i = compute_loss_on_sample(q, d, r)
+                    va_loss_sum += float(loss_i.detach().item()); va_count += 1
         va_avg = va_loss_sum / max(1, va_count)
 
         if accelerator.is_main_process:
-            print(f"[Epoch {epoch}] train_avg={tr_avg:.6f} | valid_avg={va_avg:.6f} | skipped(nan): train={train_nan_skipped}, valid={val_nan_skipped}")
+            print(f"[Epoch {epoch}] train_avg={tr_avg:.6f} | valid_avg={va_avg:.6f} | n_train={tr_count} | n_valid={va_count}")
             if run is not None:
+                run.log({"epoch": epoch, "train/avg": tr_avg, "valid/avg": va_avg})
+
+        # ---- save best ----
+        if va_count > 0 and va_avg < best_loss and accelerator.is_main_process:
+            best_loss = va_avg
+            # clean dir
+            for p in best_dir.glob("*"):
                 try:
-                    run.log({
-                        "epoch": epoch,
-                        "train/avg": tr_avg,
-                        "valid/avg": va_avg,
-                        "train/nan_skipped": train_nan_skipped,
-                        "valid/nan_skipped": val_nan_skipped,
-                    })
+                    if p.is_file(): p.unlink()
+                    elif p.is_dir():
+                        import shutil; shutil.rmtree(p)
                 except Exception:
                     pass
 
-        if va_avg < best_loss:
-            best_loss = va_avg
-            if accelerator.is_main_process:
-                # Save best
-                for p in best_dir.glob("*"):
-                    try:
-                        if p.is_file(): p.unlink()
-                        elif p.is_dir():
-                            import shutil; shutil.rmtree(p)
-                    except Exception:
-                        pass
-                # Save clean base backbone to base/
-                base_dir = best_dir / "base"
-                base_dir.mkdir(parents=True, exist_ok=True)
+            base_dir = best_dir / "base"; base_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                to_unwrap = accelerator.unwrap_model(model)
+                # PEFT 여부
+                is_peft = False
                 try:
-                    clean = AutoModelForCausalLM.from_pretrained(
-                        args.model_name,
-                        trust_remote_code=False,
-                        torch_dtype=dtype,
-                        cache_dir=args.cache_dir_model,
-                    )
-                    try:
-                        setattr(clean.config, "auto_map", None)
-                    except Exception:
-                        pass
-                    clean.save_pretrained(base_dir, safe_serialization=True)
-                    del clean
-                except Exception as e:
-                    raise RuntimeError(f"Failed saving clean base: {e}")
-                # Save LoRA adapter if present
-                if use_lora:
-                    try:
-                        (best_dir / "lora").mkdir(parents=True, exist_ok=True)
-                        model.save_pretrained(best_dir / "lora")
-                    except Exception as e:
-                        print(f"[Warn] failed to save LoRA: {e}")
-                # Save tokenizer + generation config
-                try:
-                    tokenizer.save_pretrained(best_dir)
+                    from peft import PeftModel
+                    is_peft = isinstance(to_unwrap, PeftModel)
                 except Exception:
                     pass
-                try:
-                    if getattr(model, "generation_config", None) is not None:
-                        model.generation_config.to_json_file(str(best_dir / "generation_config.json"))
-                except Exception:
-                    pass
-                print(f"[Best] Saved to {best_dir} (val={best_loss:.6f})")
-                # Drop a lightweight inference helper next to best/ for convenience
-                try:
-                    helper_src = Path(__file__).parent / "infer_lopa_pure.py"
-                    if helper_src.is_file():
-                        import shutil
-                        shutil.copy2(helper_src, best_dir / "infer_lopa_pure.py")
-                except Exception:
-                    pass
+                if is_peft:
+                    from transformers.models.llama.modeling_llama import LlamaForCausalLM as _LM
+                    base_clean = _LM.from_pretrained(args.model_name, torch_dtype=dtype, cache_dir=args.cache_dir_model)
+                    base_clean.save_pretrained(base_dir, safe_serialization=True)
+                    (best_dir / "lora").mkdir(parents=True, exist_ok=True)
+                    to_unwrap.save_pretrained(best_dir / "lora")
+                else:
+                    to_unwrap.save_pretrained(base_dir, safe_serialization=True)
+            except Exception as e:
+                raise RuntimeError(f"Failed to save best: {e}")
+
+            try:
+                tokenizer.save_pretrained(best_dir)
+                with open(best_dir / "tri_info.txt", "w") as f:
+                    f.write(f"lower_k={K}\n")
+                    f.write(f"max_response_tokens={MAX_R}\n")
+                    f.write("rope=global (TRI)\n")
+                    f.write("teacher_forcing=header+content write_cache=True\n")
+                    f.write("zero_padding=off, alpha=off\n")
+            except Exception:
+                pass
+
+            print(f"[Best] Saved to {best_dir} (val={best_loss:.6f})")
 
         accelerator.wait_for_everyone()
 
-    # Hub upload (optional, main process only)
-    if accelerator.is_main_process and args.push_to_hub and args.hf_repo_id:
+    # push to hub
+    if accelerator.is_main_process and args.push_to_hub:
         token = os.environ.get("HF_TOKEN", "")
-        if not token:
-            raise ValueError("HF_TOKEN not set; export HF_TOKEN=... to push to hub")
-        create_repo(args.hf_repo_id, exist_ok=True, private=args.private_repo, token=token)
-        upload_folder(
-            repo_id=args.hf_repo_id,
-            folder_path=str(best_dir),
-            token=token,
-            commit_message="LoPA pure trainer upload",
-            allow_patterns=["*"],
-        )
-        print(f"✅ Uploaded to hub: {args.hf_repo_id}")
+        _require(bool(token), "HF_TOKEN not set; export HF_TOKEN=...")
+
+        repo_id = getattr(args, "hf_repo_id", None)
+        if not repo_id:
+            org = getattr(args, "hf_repo_org", None)
+            base_name = Path(args.save_best_dir).resolve().name or "lopa-tri-balanced-tf"
+            repo_id = f"{org}/{base_name}" if org else base_name
+
+        from huggingface_hub import create_repo, upload_folder
+        create_repo(repo_id, exist_ok=True, private=bool(getattr(args, "private_repo", False)), token=token)
+        upload_folder(repo_id=repo_id, folder_path=str(best_dir),
+                      token=token, commit_message="LoPA(TRI, teacher forcing fixed, response cap)", allow_patterns=["*"])
+        print(f"✅ Uploaded to Hub: {repo_id}")
 
 
 def main():

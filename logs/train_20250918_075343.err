@@ -1,0 +1,10 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 318.08it/s]
+wandb: Currently logged in as: luke0112 to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.21.4
+wandb: Run data is saved locally in /workspace/LatentCOMP_cleaned/wandb/run-20250918_075411-1o35fi6w
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run lopa_tri_balanced_K8_R1024
+wandb: ⭐️ View project at https://wandb.ai/luke0112/latentcomp-cleaned
+wandb: 🚀 View run at https://wandb.ai/luke0112/latentcomp-cleaned/runs/1o35fi6w
+Epoch 1 [train]:   0%|          | 0/8940 [00:00<?, ?it/s]Epoch 1 [train]:   0%|          | 1/8940 [00:01<3:37:14,  1.46s/it]Epoch 1 [train]:   0%|          | 2/8940 [00:02<2:43:13,  1.10s/it]Epoch 1 [train]:   0%|          | 3/8940 [00:03<2:26:28,  1.02it/s]Epoch 1 [train]:   0%|          | 4/8940 [00:04<2:29:38,  1.00s/it]Epoch 1 [train]:   0%|          | 5/8940 [00:04<2:14:35,  1.11it/s]Epoch 1 [train]:   0%|          | 6/8940 [00:05<2:14:07,  1.11it/s]Epoch 1 [train]:   0%|          | 7/8940 [00:06<2:22:41,  1.04it/s]Epoch 1 [train]:   0%|          | 8/8940 [00:07<2:15:10,  1.10it/s]Epoch 1 [train]:   0%|          | 9/8940 [00:08<2:13:39,  1.11it/s]

@@ -1,0 +1,8 @@
+[Unified] Training method: lopa
+CutGen: False
+[DEBUG] modeling_llama path: /workspace/LatentCOMP_cleaned/lopa_llama_modeling.py
+[DEBUG] TRI bound: {'tri_prefill_system_all': True, 'tri_prefill_user_lower': True, 'tri_build_caches': True, 'tri_forward_assistant': True} {'tri_build_caches': True, 'tri_forward_assistant': True, 'tri_step_logits': True}
+[Info] attn_implementation = eager
+[LoRA] target_modules = ['down_proj', 'gate_proj', 'k_proj', 'o_proj', 'q_proj', 'up_proj', 'v_proj']
+[Env] torch: 2.7.1+cu128 cuda: 12.8
+[Env] device: NVIDIA RTX PRO 6000 Blackwell Workstation Edition | param dtype: torch.bfloat16

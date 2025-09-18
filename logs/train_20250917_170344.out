@@ -1,0 +1,19 @@
+[Unified] Training method: lopa
+CutGen: False
+[DEBUG] modeling_llama path: /workspace/LatentCOMP_cleaned/lopa_llama_modeling.py
+[DEBUG] TRI bound: {'tri_prefill_system_all': True, 'tri_prefill_user_lower': True, 'tri_build_caches': True, 'tri_forward_assistant': True} {'tri_build_caches': True, 'tri_forward_assistant': True, 'tri_step_logits': True}
+[Info] attn_implementation = eager
+[LoRA] target_modules = ['down_proj', 'gate_proj', 'k_proj', 'o_proj', 'q_proj', 'up_proj', 'v_proj']
+[Env] torch: 2.7.1+cu128 cuda: 12.8
+[Env] device: NVIDIA RTX PRO 6000 Blackwell Workstation Edition | param dtype: torch.bfloat16
+[Epoch 1] train_avg=0.004217 | valid_avg=0.000009 | valid_tok_avg=0.000009 | n_train=8940 | n_valid=993
+[Best] Saved to /workspace/LatentCOMP_cleaned/LatentCOMP_cleaned/outputs/Llama-3.1-8B-Instruct-LOPA-partial8-0specials/best (val=0.000009)
+[Epoch 2] train_avg=0.000040 | valid_avg=0.000005 | valid_tok_avg=0.000005 | n_train=8940 | n_valid=993
+[Best] Saved to /workspace/LatentCOMP_cleaned/LatentCOMP_cleaned/outputs/Llama-3.1-8B-Instruct-LOPA-partial8-0specials/best (val=0.000005)
+[Epoch 3] train_avg=0.000020 | valid_avg=0.000003 | valid_tok_avg=0.000003 | n_train=8940 | n_valid=993
+[Best] Saved to /workspace/LatentCOMP_cleaned/LatentCOMP_cleaned/outputs/Llama-3.1-8B-Instruct-LOPA-partial8-0specials/best (val=0.000003)
+✅ Uploaded to Hub: jeongseokoh/best
+[Unified] Packaged best artifact at: /workspace/LatentCOMP_cleaned/LatentCOMP_cleaned/outputs/Llama-3.1-8B-Instruct-LOPA-partial8-0specials/best
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mlopa_tri_balanced_K8[0m at: [34m[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20250917_170412-7ov2xunb/logs[0m

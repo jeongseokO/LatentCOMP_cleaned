@@ -1,0 +1,23 @@
+[DEBUG] TRI patch loaded: lopa_llama_modeling.py
+[INFO] device=cuda, dtype=torch.bfloat16, |data|=11008
+[INFO] lower_k(prefill_layers) = 16
+
+[quick_probe]
+  trainer_like_loss_avg : 0.30249261881411077
+  manual_NLL_avg        : 0.3024873046875
+  avg_len_tokens        : 133.885
+  masked_rate_avg       : 0.0
+  n_samples_used        : 1000
+
+[corrupt_and_loss]
+  ex01: clean=0.3003  corrupt=0.8277  (flip_rate≈9.0%)  Δ=0.5274
+  ex02: clean=0.4649  corrupt=0.9312  (flip_rate≈13.5%)  Δ=0.4663
+  ex03: clean=0.3965  corrupt=1.0823  (flip_rate≈14.8%)  Δ=0.6858
+  ex04: clean=0.5575  corrupt=0.7142  (flip_rate≈11.3%)  Δ=0.1566
+  ex05: clean=0.2110  corrupt=0.4096  (flip_rate≈11.9%)  Δ=0.1986
+  ex06: clean=0.2008  corrupt=0.4892  (flip_rate≈6.0%)  Δ=0.2884
+  ex07: clean=0.3036  corrupt=0.6625  (flip_rate≈10.8%)  Δ=0.3588
+  ex08: clean=0.1974  corrupt=0.7087  (flip_rate≈11.8%)  Δ=0.5113
+  ex09: clean=0.2672  corrupt=0.5054  (flip_rate≈6.7%)  Δ=0.2381
+  ex10: clean=0.3116  corrupt=0.8823  (flip_rate≈17.4%)  Δ=0.5707
+  Δ(corrupt-clean) avg = 0.3873  over 1000 samples

@@ -25,6 +25,23 @@ import shutil
 import subprocess
 from pathlib import Path
 
+
+def _get_rank() -> int:
+    """Return distributed rank from env if present, else 0.
+
+    This lets us run this orchestration script under torchrun without
+    accidentally spawning the inner trainer N times. Only rank 0 will
+    perform the actual training and repackaging.
+    """
+    for k in ("RANK", "LOCAL_RANK"):
+        v = os.environ.get(k)
+        if v is not None:
+            try:
+                return int(v)
+            except Exception:
+                pass
+    return 0
+
 from latentcomp_cleaned.naming import build_repo_name
 from latentcomp_cleaned.saving import save_base_and_lora
 
@@ -42,12 +59,30 @@ def parse_args():
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--prefill_layers", type=int, default=0, help="Used for lopa/combined (LOPA)")
     p.add_argument("--special_tokens", type=int, default=10, help="How many Latent specials to add (lcomp/combined)")
+    # dataset controls (forwarded to lopa trainer)
+    p.add_argument("--max_doc_tokens", type=int, default=2048)
+    # explode default True; allow disabling via --no_explode
+    p.add_argument("--explode", action="store_true", default=True)
+    p.add_argument("--no_explode", dest="explode", action="store_false")
+    # group responses by question id (default on)
+    p.add_argument("--group_by_question", action="store_true", default=True)
+    p.add_argument("--no_group_by_question", dest="group_by_question", action="store_false")
     # phased LatentCOMP toggles
     p.add_argument("--include_query", type=str, default="True", help="lcomp: include query around specials")
     p.add_argument("--include_specials", type=str, default="True", help="lcomp: include latent specials")
     p.add_argument("--use_lora", action="store_true")
     # LOPA experiment: cut gen at prefill_layers as well
     p.add_argument("--also_cut_gen", action="store_true", help="If set (LOPA only), run gen with layers_limit=prefill_layers")
+    # distributed / sharding (forwarded to lopa pure trainer)
+    p.add_argument("--dist_mode", type=str, choices=["ddp", "fsdp", "deepspeed"], default="ddp")
+    p.add_argument("--zero_stage", type=int, default=2)
+    # numeric controls (subset forwarded to lopa pure trainer)
+    p.add_argument("--dtype", type=str, choices=["auto","bf16","fp16","fp32"], default="auto")
+    p.add_argument("--no_tf32", action="store_true")
+    p.add_argument("--sdpa_math_only", action="store_true")
+    p.add_argument("--warmup_steps", type=int, default=0)
+    p.add_argument("--warmup_ratio", type=float, default=0.05)
+    p.add_argument("--grad_clip", type=float, default=1.0)
     # logging + hub
     p.add_argument("--wandb_project", type=str, default="latentcomp-cleaned")
     p.add_argument("--push_to_hub", action="store_true")
@@ -66,6 +101,7 @@ def is_mistral(model_name: str) -> bool:
 
 def main():
     args = parse_args()
+    rank = _get_rank()
     method = args.train_method
     args.also_cut_gen = False
     print(f"[Unified] Training method: {method}")
@@ -97,23 +133,37 @@ def main():
     trainer_gen3 = here / "train_lopa_pure.py"
 
     if method == "lopa":
-        cmd = [
-            "python", str(trainer_gen3),
-            "--model_name", args.model_name,
-            "--data_file", args.data_file,
-            "--epochs", str(args.epochs),
-            "--batch_size", str(args.batch_size),
-            "--lr", str(args.lr),
-            "--seed", str(args.seed),
-            "--prefill_layers", str(max(0, int(args.prefill_layers))),
-            "--wandb_project", args.wandb_project,
-            "--save_best_dir", str(best_dir),
-        ]
-        if args.cache_dir_model: cmd += ["--cache_dir_model", args.cache_dir_model]
-        if args.cache_dir_tokenizer: cmd += ["--cache_dir_tokenizer", args.cache_dir_tokenizer]
-        if args.use_lora: cmd += ["--use_lora", "True"]
-        # Prefer original geometry via default; trainer uses unchanged positions
+        # Run LoPA pure trainer in-process so it can leverage DDP/FSDP/DeepSpeed via Accelerate
+        # Make sure the pure trainer sees the same save directory
+        setattr(args, "save_best_dir", str(best_dir))
+        # Ensure LoPA-pure specific args exist when calling directly (bypassing its argparser)
+        # - lopa_modeling_path: point to our custom modeling file
+        # - attn_impl: default to a stable backend
+        # - aux/explicit flags: keep trainer defaults
+        if not hasattr(args, "lopa_modeling_path") or not args.lopa_modeling_path:
+            setattr(args, "lopa_modeling_path", str(here / "lopa_llama_modeling.py"))
+        if not hasattr(args, "attn_impl") or not args.attn_impl:
+            setattr(args, "attn_impl", "flash_attention_2")
+        if not hasattr(args, "aux_prefix_loss_ratio"):
+            setattr(args, "aux_prefix_loss_ratio", 0.0)
+        if not hasattr(args, "explicit_empty_upper_cache"):
+            setattr(args, "explicit_empty_upper_cache", False)
+        # LoRA hyperparams expected by pure trainer
+        if not hasattr(args, "lora_r"):
+            setattr(args, "lora_r", 4)
+        if not hasattr(args, "lora_alpha"):
+            setattr(args, "lora_alpha", 8)
+        if not hasattr(args, "lora_dropout"):
+            setattr(args, "lora_dropout", 0.05)
+        # Import and call the trainer
+        import importlib
+        lopa_mod = importlib.import_module("train_lopa_pure")
+        lopa_mod.train(args)
     else:
+        # For non-LoPA methods, we still launch the legacy trainers via subprocess on rank 0 only
+        if rank != 0:
+            print(f"[Unified] Non-zero rank={rank}; skipping inner launch for method={method}.")
+            return
         # lcomp or combined → special tokens + optional partial prefill
         pl = 0 if method == "lcomp" else max(1, int(args.prefill_layers))
         # Use the new, clean phased trainer for lcomp; keep legacy for combined
@@ -155,9 +205,9 @@ def main():
         if method == "combined":
             cmd += ["--pos_mode", "original"]
 
-    print("[Unified] launching:", " ".join(cmd))
-    # Run trainer (subprocess). If running under a job system, this can be delegated.
-    subprocess.run(cmd, check=True)
+        print("[Unified] launching:", " ".join(cmd))
+        # Run trainer (subprocess). If running under a job system, this can be delegated.
+        subprocess.run(cmd, check=True)
 
     # Repackage: ensure remote-code mapping to unified wrappers and enforce generate defaults
     # Identify partial-layer modeling sources to copy into best/
@@ -168,7 +218,10 @@ def main():
     src_llama_unified = here / "latentcomp_cleaned" / "remote" / "modeling_partial_layer_unified.py"
     src_mistral_unified = here / "latentcomp_cleaned" / "remote" / "modeling_mistral_partial_unified.py"
 
-    # There should be base/ under best_dir from the inner trainer; if not, just pass through
+    # Only rank 0 repacks
+    if rank != 0:
+        return
+    # There should be base/ under best_dir from the inner trainer; if not, skip
     if not (best_dir / "base").exists():
         print(f"[Unified] best package not found at {best_dir}. Skipping repack.")
         return

@@ -1,0 +1,22 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 314.83it/s]
+wandb: Currently logged in as: luke0112 to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: creating run
+wandb: Tracking run with wandb version 0.21.4
+wandb: Run data is saved locally in /workspace/LatentCOMP_cleaned/wandb/run-20250917_165650-c1wtkz83
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run lopa_tri_balanced_K8
+wandb: ⭐️ View project at https://wandb.ai/luke0112/latentcomp-cleaned
+wandb: 🚀 View run at https://wandb.ai/luke0112/latentcomp-cleaned/runs/c1wtkz83
+Epoch 1 [train]:   0%|          | 0/8940 [00:00<?, ?it/s]                                                         Traceback (most recent call last):
+  File "/workspace/LatentCOMP_cleaned/train.py", line 266, in <module>
+    main()
+  File "/workspace/LatentCOMP_cleaned/train.py", line 161, in main
+    lopa_mod.train(args)
+  File "/workspace/LatentCOMP_cleaned/train_lopa_pure.py", line 655, in train
+    loss_val, n_tok_total, w_total = compute_loss_on_group_seq(str(qid), q, d, rs)  # 내부에서 backward
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LatentCOMP_cleaned/train_lopa_pure.py", line 588, in compute_loss_on_group_seq
+    debug_check_layout(pkv_su, S_len, U_len, K, tag="after_SU_prefill", enabled=args.debug_layout)
+                                                                                ^^^^^^^^^^^^^^^^^
+AttributeError: 'Namespace' object has no attribute 'debug_layout'
