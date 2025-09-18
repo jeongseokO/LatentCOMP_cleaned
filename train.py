@@ -88,13 +88,19 @@ def parse_args():
     p.add_argument("--grad_clip", type=float, default=1.0)
     # logging + hub
     p.add_argument("--wandb_project", type=str, default="latentcomp-cleaned")
+    p.add_argument("--wandb_run_name", type=str, default=None,
+                   help="Optional explicit Weights & Biases run name")
     p.add_argument("--push_to_hub", action="store_true")
     p.add_argument("--private_repo", action="store_true")
     p.add_argument("--hf_repo_org", type=str, default=None, help="Optional org/user prefix for repo id")
+    p.add_argument("--hf_repo_id", type=str, default=None,
+                   help="Optional explicit Hugging Face repo id to override auto naming")
     # cache/paths
     p.add_argument("--cache_dir_model", type=str, default=None)
     p.add_argument("--cache_dir_tokenizer", type=str, default=None)
     p.add_argument("--out_root", type=str, default="LatentCOMP_cleaned/outputs")
+    p.add_argument("--save_best_dir", type=str, default=None,
+                   help="Optional explicit directory for best checkpoint saving")
     return p.parse_args()
 
 
@@ -117,7 +123,8 @@ def main():
     repo_basename = build_repo_name(
         args.model_name, args.train_method, args.prefill_layers, (0 if method == "lopa" else args.special_tokens)
     )
-    repo_id = repo_basename if not args.hf_repo_org else f"{args.hf_repo_org}/{repo_basename}"
+    default_repo_id = repo_basename if not args.hf_repo_org else f"{args.hf_repo_org}/{repo_basename}"
+    repo_id = args.hf_repo_id or default_repo_id
 
     # Anchor outputs relative to this file if a relative path is given
     here = Path(__file__).resolve().parent
@@ -125,7 +132,13 @@ def main():
     if not out_root.is_absolute():
         out_root = (here / out_root).resolve()
     work_dir = out_root / repo_basename
-    best_dir = work_dir / "best"
+    default_best_dir = work_dir / "best"
+    best_dir = default_best_dir
+    if args.save_best_dir:
+        cand = Path(args.save_best_dir)
+        if not cand.is_absolute():
+            cand = (here / cand).resolve()
+        best_dir = cand
     work_dir.mkdir(parents=True, exist_ok=True)
     best_dir.mkdir(parents=True, exist_ok=True)
 
