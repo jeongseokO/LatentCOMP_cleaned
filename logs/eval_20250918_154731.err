@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/workspace/LatentCOMP_cleaned/evaluation/evaluate.py", line 20, in <module>
+    from evaluation.dataset_utils import (
+  File "/workspace/LatentCOMP_cleaned/evaluation/dataset_utils/__init__.py", line 2, in <module>
+    from .triviaqa import TriviaQAIterator
+  File "/workspace/LatentCOMP_cleaned/evaluation/dataset_utils/triviaqa.py", line 5, in <module>
+    from utils.utils import normalize_answer  # 외부 제공
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'utils'
