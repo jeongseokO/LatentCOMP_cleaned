@@ -365,6 +365,7 @@ def train(args):
         special_add_target = "none"
     special_tokens = [f"<|Latent{i}|>" for i in range(1, num_specials + 1)] if num_specials > 0 else []
     specials_joined = " ".join(special_tokens) if special_tokens else ""
+    train_special_embeddings = bool(special_tokens) and special_add_target in {"user", "assistant"}
     tokens_to_add = [tok for tok in special_tokens if tok not in tokenizer.all_special_tokens]
     if tokens_to_add:
         tokenizer.add_special_tokens({"additional_special_tokens": tokens_to_add})
@@ -393,7 +394,7 @@ def train(args):
 
     # 4) Model
     model = LlamaForCausalLM.from_pretrained(args.model_name, torch_dtype=dtype, cache_dir=args.cache_dir_model)
-    if special_tokens and special_add_target != "none":
+    if train_special_embeddings:
         try:
             current = model.get_input_embeddings().weight.size(0)
         except Exception:
@@ -437,6 +438,14 @@ def train(args):
             target_modules=cli_targets,
         )
         model = get_peft_model(model, lcfg)
+
+    if train_special_embeddings:
+        input_emb = model.get_input_embeddings()
+        if input_emb is not None:
+            input_emb.weight.requires_grad = True
+        output_emb = getattr(model, "lm_head", None)
+        if output_emb is not None and hasattr(output_emb, "weight"):
+            output_emb.weight.requires_grad = True
 
     # 8) Data
     ds_all = QADataset(args.data_file, tokenizer,
@@ -605,10 +614,11 @@ def train(args):
 
     # wandb (optional)
     run = None
+    wandb_name = getattr(args, "wandb_run_name", None) or f"lopa_tri_balanced_K{K}_R{MAX_R}"
     if accelerator.is_main_process and args.wandb_project:
         try:
             import wandb
-            run = wandb.init(project=args.wandb_project, name=f"lopa_tri_balanced_K{K}_R{MAX_R}", config=vars(args))
+            run = wandb.init(project=args.wandb_project, name=wandb_name, config=vars(args))
         except Exception:
             run = None
 
@@ -719,6 +729,19 @@ def train(args):
                 if is_peft:
                     from transformers.models.llama.modeling_llama import LlamaForCausalLM as _LM
                     base_clean = _LM.from_pretrained(args.model_name, torch_dtype=dtype, cache_dir=args.cache_dir_model)
+                    if train_special_embeddings:
+                        base_clean.resize_token_embeddings(len(tokenizer))
+                        trained_base = _unwrap_peft(to_unwrap)
+                        trained_inp = trained_base.get_input_embeddings()
+                        clean_inp = base_clean.get_input_embeddings()
+                        if trained_inp is not None and clean_inp is not None:
+                            clean_inp.weight.data.copy_(trained_inp.weight.detach().to(clean_inp.weight.dtype))
+                        trained_head = getattr(trained_base, "lm_head", None)
+                        clean_head = getattr(base_clean, "lm_head", None)
+                        if (clean_head is not None and trained_head is not None and
+                                hasattr(clean_head, "weight") and hasattr(trained_head, "weight") and
+                                clean_head.weight.size() == trained_head.weight.size()):
+                            clean_head.weight.data.copy_(trained_head.weight.detach().to(clean_head.weight.dtype))
                     base_clean.save_pretrained(base_dir, safe_serialization=True)
                     (best_dir / "lora").mkdir(parents=True, exist_ok=True)
                     to_unwrap.save_pretrained(best_dir / "lora")
