@@ -166,6 +166,10 @@ def build_argparser():
     p.add_argument("--max_doc_tokens", type=int, default=2048)
     p.add_argument("--max_response_tokens", type=int, default=1024,
                    help="cap assistant tokens per sample to this many tokens")
+    p.add_argument("--num_specials", type=int, default=0,
+                   help="Number of Latent special tokens to inject per sample.")
+    p.add_argument("--special_add_to", type=str, choices=["none", "user", "assistant"], default="none",
+                   help="Where to place Latent specials (user tail or assistant head).")
     p.add_argument("--explode", action="store_true", default=True)
     p.add_argument("--no_explode", dest="explode", action="store_false")
     p.add_argument("--group_by_question", action="store_true", default=True)
@@ -355,6 +359,16 @@ def train(args):
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
+    num_specials = max(0, int(getattr(args, "num_specials", 0)))
+    special_add_target = (getattr(args, "special_add_to", "none") or "none").lower()
+    if special_add_target not in {"user", "assistant"}:
+        special_add_target = "none"
+    special_tokens = [f"<|Latent{i}|>" for i in range(1, num_specials + 1)] if num_specials > 0 else []
+    specials_joined = " ".join(special_tokens) if special_tokens else ""
+    tokens_to_add = [tok for tok in special_tokens if tok not in tokenizer.all_special_tokens]
+    if tokens_to_add:
+        tokenizer.add_special_tokens({"additional_special_tokens": tokens_to_add})
+
     # 3) dtype
     if args.dtype == "fp32": dtype = torch.float32
     elif args.dtype == "bf16": dtype = torch.bfloat16
@@ -379,6 +393,13 @@ def train(args):
 
     # 4) Model
     model = LlamaForCausalLM.from_pretrained(args.model_name, torch_dtype=dtype, cache_dir=args.cache_dir_model)
+    if special_tokens and special_add_target != "none":
+        try:
+            current = model.get_input_embeddings().weight.size(0)
+        except Exception:
+            current = None
+        if current is None or current != len(tokenizer):
+            model.resize_token_embeddings(len(tokenizer))
 
     # 5) Attention impl
     impl = args.attn_impl
@@ -478,6 +499,11 @@ def train(args):
         else:
             msgs = build_messages_docqa(system_prompt_doc, d, q)
 
+        if specials_joined and special_add_target == "user":
+            user_content = msgs[-1]["content"]
+            sep = "\n\n" if not user_content.endswith("\n") else ""
+            msgs[-1]["content"] = f"{user_content}{sep}{specials_joined}"
+
         S_ids   = tokens_from_messages(tokenizer, msgs[:1], accelerator.device, add_generation_prompt=False)
         SU_ids  = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=False)
         SU_gen  = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=True)
@@ -488,6 +514,12 @@ def train(args):
         return msgs, S_ids, SU_ids, SU_gen, user_delta, assistant_header_delta
 
     def _assistant_content_delta(msgs, resp: str, SU_gen_ids):
+        if specials_joined and special_add_target == "assistant":
+            if resp:
+                lead_space = " " if not resp[0].isspace() else ""
+                resp = f"{specials_joined}{lead_space}{resp}"
+            else:
+                resp = specials_joined
         msgs_ass = msgs + [{"role": "assistant", "content": resp}]
         full_ids = tokens_from_messages(tokenizer, msgs_ass, accelerator.device, add_generation_prompt=False)
         assistant_delta = full_ids[:, SU_gen_ids.size(1):]
