@@ -59,6 +59,9 @@ def parse_args():
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--prefill_layers", type=int, default=0, help="Used for lopa/combined (LOPA)")
     p.add_argument("--special_tokens", type=int, default=10, help="How many Latent specials to add (lcomp/combined)")
+    p.add_argument("--num_specials", type=int, default=0, help="LoPA: number of Latent specials to inject into conversations")
+    p.add_argument("--special_add_to", type=str, choices=["none", "user", "assistant"], default="none",
+                   help="LoPA: where to place Latent specials (user tail or assistant head)")
     # dataset controls (forwarded to lopa trainer)
     p.add_argument("--max_doc_tokens", type=int, default=2048)
     # explode default True; allow disabling via --no_explode
