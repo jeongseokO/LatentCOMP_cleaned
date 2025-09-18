@@ -11,8 +11,10 @@ Balanced(수정 요지):
 
 추가:
 - --max_response_tokens (기본 1024): 응답(assistant) 토큰 길이 상한
-  * assistant_delta = assistant_delta[:, :MAX_R] 로 cap
-  * cap 후 길이 < 2이면(shift loss 불가) 해당 응답 스킵/0-loss
+
+### [Math-aware changes]
+- document가 빈 문자열이면 수학 문제로 간주하여, 수학용 system/user 템플릿을 사용
+- 데이터셋 로더가 document==""를 허용(기존엔 제거)
 """
 
 from __future__ import annotations
@@ -86,10 +88,6 @@ def _infer_lora_targets_from_model(model: nn.Module) -> list[str]:
 # Custom modeling injection (TRI, STRICT)
 # -----------------------
 def load_custom_llama_modeling_TRI(modeling_path: Path):
-    """
-    Load local `lopa_llama_modeling.py` as `transformers.models.llama.modeling_llama`.
-    Also verifies TRI APIs are present.
-    """
     import importlib.util, sys
     import transformers
     import transformers.models.llama as llama_pkg
@@ -166,7 +164,7 @@ def build_argparser():
 
     # data
     p.add_argument("--max_doc_tokens", type=int, default=2048)
-    p.add_argument("--max_response_tokens", type=int, default=1024,   # ★ 추가: 응답 길이 상한
+    p.add_argument("--max_response_tokens", type=int, default=1024,
                    help="cap assistant tokens per sample to this many tokens")
     p.add_argument("--explode", action="store_true", default=True)
     p.add_argument("--no_explode", dest="explode", action="store_false")
@@ -195,6 +193,11 @@ def build_argparser():
     p.add_argument("--no_responses_sequential", dest="responses_sequential", action="store_false")
 
     p.add_argument("--train_method", type=str, default="lopa")
+
+    ### [Math-aware changes]
+    p.add_argument("--math_force_final_hash_rule", action="store_true", default=False,
+                   help="수학 system 프롬프트에 '#### 숫자' 규칙을 명시적으로 강화")
+
     return p
 
 
@@ -214,20 +217,22 @@ class QADataset(Dataset):
                 except Exception:
                     continue
                 q = (rec.get("question") or "").strip()
-                d = (rec.get("document") or "").strip()
-                if not q or not d:
-                    continue
-                qid = rec.get("question_id", rec.get("id", None))
-                if qid is None:
-                    qid = f"auto_{auto_idx}"; auto_idx += 1
-                try: qid = str(qid)
-                except Exception: qid = f"auto_{auto_idx}"; auto_idx += 1
+                d = (rec.get("document") or "")
+                # ### [Math-aware changes] — document가 비어도 허용
+                d = d.strip()
 
-                try: n_tok = len(tokenizer(d, add_special_tokens=False).input_ids)
-                except Exception: n_tok = 0
+                if not q:
+                    continue  # 질문은 반드시 필요
+
+                # 문서 토큰 길이 필터 (비어있으면 0이므로 통과)
+                try:
+                    n_tok = len(tokenizer(d, add_special_tokens=False).input_ids)
+                except Exception:
+                    n_tok = 0
                 if n_tok > max_doc_tokens:
                     continue
 
+                # 응답 수집
                 cands: List[str] = []
                 rs = rec.get("responses")
                 if isinstance(rs, list):
@@ -239,6 +244,14 @@ class QADataset(Dataset):
                     cands = [r_single.strip()]
                 if not cands:
                     continue
+
+                qid = rec.get("question_id", rec.get("id", None))
+                if qid is None:
+                    qid = f"auto_{auto_idx}"; auto_idx += 1
+                try:
+                    qid = str(qid)
+                except Exception:
+                    qid = f"auto_{auto_idx}"; auto_idx += 1
 
                 if group_by_question:
                     self.recs.append((qid, q, d, cands))
@@ -254,8 +267,13 @@ class QADataset(Dataset):
 
 def collate_identity(batch): return batch
 
-def build_messages(system: str, document: str, question: str, include_query: bool = True):
-    user = f"Document:\n{document}\n\nQuestion: {question}" if include_query else f"Document:\n{document}\n\n"
+### [Math-aware changes] — 메시지 빌더를 DocQA/Math로 분기
+def build_messages_docqa(system: str, document: str, question: str):
+    user = f"Document:\n{document}\n\nQuestion: {question}"
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+def build_messages_math(system: str, question: str):
+    user = question
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 def apply_chat_template(tokenizer, messages, add_generation_prompt: bool):
@@ -308,11 +326,6 @@ def _build_accelerator(args) -> Accelerator:
     return Accelerator(mixed_precision=mp)
 
 def _fork_cache_view(pkv):
-    """
-    DynamicCache 얕은 복제:
-      - 객체 shallow copy
-      - key_cache/value_cache 리스트만 새 리스트로 교체 (Tensor 참조는 동일)
-    """
     new = copy(pkv)
     if hasattr(pkv, "key_cache") and hasattr(pkv, "value_cache"):
         new.key_cache  = list(pkv.key_cache)
@@ -349,7 +362,6 @@ def train(args):
     else:
         dtype = (torch.bfloat16 if (device == "cuda" and torch.cuda.is_bf16_supported())
                  else (torch.float16 if device == "cuda" else torch.float32))
-    # 권장: bf16
     dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else dtype
     if torch.cuda.is_available():
         try:
@@ -439,7 +451,14 @@ def train(args):
                                                 num_warmup_steps=max(0, warmup_steps),
                                                 num_training_steps=max(1, total_train_steps))
 
-    system_prompt = "You are a helpful assistant that answers questions based on the given document."
+    ### [Math-aware changes] — 두 가지 시스템 프롬프트
+    system_prompt_doc = (
+        "You are a helpful assistant that answers questions based on the given document."
+    )
+    system_prompt_math = (
+        "You are a methodical mathematician, adept at solving complex mathematical problems. Conclude your explanation with the answer in a '#### {numeric answer}' format, where the answer is solely a number."
+    )
+
     K = max(0, int(args.prefill_layers))  # lower_k
     MAX_R = max(1, int(getattr(args, "max_response_tokens", 1024)))
 
@@ -447,11 +466,21 @@ def train(args):
     # Chat-template TRI helpers
     # -----------------------
     def _build_segments(q: str, d: str):
-        """S_ids, SU_ids, SU_gen, user_delta, assistant_header_delta"""
-        msgs = build_messages(system_prompt, d, q, include_query=True)
-        S_ids = tokens_from_messages(tokenizer, msgs[:1], accelerator.device, add_generation_prompt=False)
-        SU_ids = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=False)
-        SU_gen = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=True)
+        """
+        Return:
+          msgs, S_ids, SU_ids, SU_gen, user_delta, assistant_header_delta
+        with Math/DocQA-aware messages.
+        """
+        is_math = (len(d.strip()) == 0)
+
+        if is_math:
+            msgs = build_messages_math(system_prompt_math, q)
+        else:
+            msgs = build_messages_docqa(system_prompt_doc, d, q)
+
+        S_ids   = tokens_from_messages(tokenizer, msgs[:1], accelerator.device, add_generation_prompt=False)
+        SU_ids  = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=False)
+        SU_gen  = tokens_from_messages(tokenizer, msgs, accelerator.device, add_generation_prompt=True)
 
         l_su = lcp_len(S_ids, SU_ids)
         user_delta = SU_ids[:, l_su:SU_ids.size(1)]
@@ -462,7 +491,6 @@ def train(args):
         msgs_ass = msgs + [{"role": "assistant", "content": resp}]
         full_ids = tokens_from_messages(tokenizer, msgs_ass, accelerator.device, add_generation_prompt=False)
         assistant_delta = full_ids[:, SU_gen_ids.size(1):]
-        # ★ 응답 길이 cap
         if assistant_delta.size(1) > MAX_R:
             assistant_delta = assistant_delta[:, :MAX_R]
         return assistant_delta
@@ -471,12 +499,10 @@ def train(args):
     # Core losses (teacher forcing: header+content, write_cache=True)
     # -----------------------
     def _tf_call(pkv, S_len: int, U_len: int, header_delta: torch.Tensor, assistant_delta: torch.Tensor):
-        """header+content를 한 번에 teacher forcing (write_cache=True) + cap 재확인"""
         if assistant_delta.size(1) > MAX_R:
-            assistant_delta = assistant_delta[:, :MAX_R]  # 이중 안전망
-        # shift loss를 위해 최소 2토큰 필요
+            assistant_delta = assistant_delta[:, :MAX_R]
         if assistant_delta.size(1) < 2:
-            return None  # 호출측에서 스킵 처리
+            return None
         inp = torch.cat([header_delta, assistant_delta], dim=1)          # [H + A]
         labels = inp.clone()
         labels[:, :header_delta.size(1)] = -100                           # header는 로스 제외
@@ -495,7 +521,6 @@ def train(args):
         # (2) Assistant delta 구성 (+ cap)
         assistant_delta = _assistant_content_delta(msgs, resp, SU_gen)
         if assistant_delta.size(1) < 2:
-            # 유효 라벨이 부족 → 0-loss 반환(학습 영향 없음)
             return torch.zeros((), device=accelerator.device, dtype=torch.float32)
 
         # (3) header+content 한 번에 teacher forcing
@@ -505,7 +530,6 @@ def train(args):
         return out.loss
 
     def compute_loss_on_group_mean(qid: str, q: str, d: str, responses: List[str]) -> torch.Tensor:
-        # 검증/평가: no-grad
         losses = []
         with torch.no_grad():
             msgs, S_ids, SU_ids, SU_gen, user_delta, header_delta = _build_segments(q, d)
@@ -513,7 +537,7 @@ def train(args):
                 if not isinstance(resp, str) or not resp.strip(): continue
                 pkv_su, S_len, U_len = model.tri_build_caches(S_ids, user_delta, lower_k=K)
                 ad = _assistant_content_delta(msgs, resp, SU_gen)
-                if ad.size(1) < 2:  # cap 이후 too short
+                if ad.size(1) < 2:
                     continue
                 out = _tf_call(pkv_su, S_len, U_len, header_delta, ad)
                 if out is not None and out.loss is not None and torch.isfinite(out.loss):
@@ -524,12 +548,11 @@ def train(args):
     def compute_loss_on_group_seq(qid: str, q: str, d: str, responses: List[str]) -> float:
         msgs, S_ids, SU_ids, SU_gen, user_delta, header_delta = _build_segments(q, d)
 
-        # 1) 유효 응답 수집(+cap, 길이 필터)
         eligible = []
         for resp in responses:
             if not isinstance(resp, str) or not resp.strip(): continue
             ad = _assistant_content_delta(msgs, resp, SU_gen)
-            if ad.size(1) < 2:  # cap 이후 too short → 스킵
+            if ad.size(1) < 2:
                 continue
             eligible.append(ad)
         _require(len(eligible) > 0, "All responses invalid/empty for this item.")
@@ -538,16 +561,12 @@ def train(args):
         bs = max(1, args.batch_size)
 
         for ad in eligible:
-            # (1) 응답별 fresh S/U 프리필 (grad ON)
             pkv_su, S_len, U_len = model.tri_build_caches(system_ids=S_ids, user_ids=user_delta, lower_k=K)
-
-            # (2) header+content 한 번에 teacher forcing
             out = _tf_call(pkv_su, S_len, U_len, header_delta, ad)
             _require(out is not None and out.loss is not None and torch.isfinite(out.loss), "loss is NaN/inf")
             lval = float(out.loss.detach().item())
             losses_for_log.append(lval)
             accelerator.backward(out.loss / eff_total / bs)
-
             del pkv_su, out
 
         return sum(losses_for_log) / eff_total
@@ -583,11 +602,11 @@ def train(args):
                 if len(it) == 4 and isinstance(it[3], list):
                     qid, q, d, rs = it
                     if RESP_SEQ:
-                        loss_val = compute_loss_on_group_seq(str(qid), q, d, rs)  # 내부 backward
+                        loss_val = compute_loss_on_group_seq(str(qid), q, d, rs)
                         step_losses.append(loss_val); valid += 1
                         continue
                     else:
-                        loss_i = compute_loss_on_group_mean(str(qid), q, d, rs)  # no grad
+                        loss_i = compute_loss_on_group_mean(str(qid), q, d, rs)
                 elif len(it) == 4:
                     qid, q, d, r = it
                     loss_i = compute_loss_on_sample(q, d, r)
@@ -631,7 +650,7 @@ def train(args):
                         loss_i = compute_loss_on_group_mean(str(qid), q, d, rs)
                     elif len(it) == 4:
                         qid, q, d, r = it
-                        loss_i = compute_loss_on_sample(q, d, r)  # eval에서도 같은 경로
+                        loss_i = compute_loss_on_sample(q, d, r)
                     else:
                         q, d, r = it
                         loss_i = compute_loss_on_sample(q, d, r)
@@ -684,6 +703,7 @@ def train(args):
                     f.write("rope=global (TRI)\n")
                     f.write("teacher_forcing=header+content write_cache=True\n")
                     f.write("zero_padding=off, alpha=off\n")
+                    f.write("prompt_modes=DocQA|Math(#### rule)\n")
             except Exception:
                 pass
 
@@ -705,7 +725,7 @@ def train(args):
         from huggingface_hub import create_repo, upload_folder
         create_repo(repo_id, exist_ok=True, private=bool(getattr(args, "private_repo", False)), token=token)
         upload_folder(repo_id=repo_id, folder_path=str(best_dir),
-                      token=token, commit_message="LoPA(TRI, teacher forcing fixed, response cap)", allow_patterns=["*"])
+                      token=token, commit_message="LoPA(TRI, teacher forcing fixed, response cap, math-aware prompts)", allow_patterns=["*"])
         print(f"✅ Uploaded to Hub: {repo_id}")
 
 

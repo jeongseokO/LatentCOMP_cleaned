@@ -1,0 +1,62 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files:  25%|██▌       | 1/4 [00:44<02:13, 44.35s/it]Fetching 4 files: 100%|██████████| 4/4 [00:44<00:00, 11.09s/it]
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 332.65it/s]
+Epoch 1 [train]:   0%|          | 0/8940 [00:00<?, ?it/s]                                                         Traceback (most recent call last):
+  File "/workspace/LatentCOMP_cleaned/train.py", line 266, in <module>
+    main()
+  File "/workspace/LatentCOMP_cleaned/train.py", line 161, in main
+    lopa_mod.train(args)
+  File "/workspace/LatentCOMP_cleaned/train_lopa_pure.py", line 586, in train
+    loss_val = compute_loss_on_group_seq(str(qid), q, d, rs)  # 내부 backward
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LatentCOMP_cleaned/train_lopa_pure.py", line 542, in compute_loss_on_group_seq
+    pkv_su, S_len, U_len = model.tri_build_caches(system_ids=S_ids, user_ids=user_delta, lower_k=K)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LatentCOMP_cleaned/lopa_llama_modeling.py", line 681, in _tri_build_caches_api
+    return core.tri_build_caches(system_ids=system_ids, user_ids=user_ids, lower_k=lower_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LatentCOMP_cleaned/lopa_llama_modeling.py", line 562, in tri_build_caches
+    out = self.tri_prefill_system_all(system_ids, past_key_values=None)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LatentCOMP_cleaned/lopa_llama_modeling.py", line 500, in tri_prefill_system_all
+    hidden_states = decoder_layer(
+                    ^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/transformers/modeling_layers.py", line 94, in __call__
+    return super().__call__(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LatentCOMP_cleaned/lopa_llama_modeling.py", line 258, in forward
+    hidden_states, _ = self.self_attn(
+                       ^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LatentCOMP_cleaned/lopa_llama_modeling.py", line 218, in forward
+    attn_output, attn_weights = attention_interface(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/transformers/integrations/flash_attention.py", line 66, in flash_attention_forward
+    attn_output = _flash_attention_forward(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/transformers/modeling_flash_attention_utils.py", line 570, in _flash_attention_forward
+    (flash_fn, flash_varlen_fn, pad_fn, unpad_fn), process_flash_kwargs_fn = lazy_import_flash_attention(
+                                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/transformers/modeling_flash_attention_utils.py", line 136, in lazy_import_flash_attention
+    _flash_fn, _flash_varlen_fn, _pad_fn, _unpad_fn = _lazy_imports(implementation)
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/transformers/modeling_flash_attention_utils.py", line 98, in _lazy_imports
+    raise ValueError(
+ValueError: Could not find the currently requested flash attention implementation at `None`.Make sure that you request a valid kernel from the hub, e.g. `kernels-community/flash-attn`.

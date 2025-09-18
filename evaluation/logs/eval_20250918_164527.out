@@ -1,0 +1,72 @@
+=== Evaluating hotpotqa ===
+[HotpotQA] Loading dataset...
+HotpotQA variant: distractor
+Using up to 10 paragraphs per question.
+[HotpotQA] downloading → ./.cache_hotpot/hotpot_dev_distractor_v1.json
+[hotpotqa] #1 | EM=NO | F1=0.00 | Contain=NO | running EM=0/1 (0.00%) | running F1=0.00
+  Q: What was Iqbal F. Qadir on when he participated in an attack on a radar station located on western shore of the Okhamandal Peninsula?
+  GT: flotilla
+  Pred: Indo-Pakistani War of 1965
+[hotpotqa] #2 | EM=YES | F1=1.00 | Contain=YES | running EM=1/2 (50.00%) | running F1=0.50
+  Q: When did the park at which Tivolis Koncertsal is located open?
+  GT: 15 august 1843
+  Pred: 15 August 1843
+[hotpotqa] #3 | EM=NO | F1=0.00 | Contain=YES | running EM=1/3 (33.33%) | running F1=0.33
+  Q: What is the shared country of ancestry between Art Laboe and Scout Tufankjian?
+  GT: armenian
+  Pred: Armenia
+[hotpotqa] #4 | EM=NO | F1=0.00 | Contain=NO | running EM=1/4 (25.00%) | running F1=0.25
+  Q: The school in which the Wilmslow Show is held is designated as what?
+  GT: centre of excellence
+  Pred: No Match
+[hotpotqa] #5 | EM=NO | F1=0.00 | Contain=NO | running EM=1/5 (20.00%) | running F1=0.20
+  Q: Who will Billy Howle be seen opposite in the upcoming British drama film directed by Dominic Cooke?
+  GT: saoirse ronan
+  Pred: Florence Pugh
+[hotpotqa] #6 | EM=NO | F1=0.00 | Contain=NO | running EM=1/6 (16.67%) | running F1=0.17
+  Q: What animated movie, starring Danny Devito, featured music written and produced by Kool Kojak?
+  GT: lorax
+  Pred: No Match
+[hotpotqa] #7 | EM=NO | F1=0.00 | Contain=NO | running EM=1/7 (14.29%) | running F1=0.14
+  Q: Out of the actors who have played the role of Luc Deveraux in the Universal Soldier franchise, which actor has also starred in the movies Holby City, Doctor ...
+  GT: scott adkins
+  Pred: No Match
+[hotpotqa] #8 | EM=NO | F1=0.00 | Contain=NO | running EM=1/8 (12.50%) | running F1=0.12
+  Q: Tommy's Honour was a drama film that included the actor who found success with what 2016 BBC miniseries?
+  GT: war peace
+  Pred: And Then There Were None
+[hotpotqa] #9 | EM=NO | F1=0.00 | Contain=NO | running EM=1/9 (11.11%) | running F1=0.11
+  Q: Which rock band chose its name by drawing it out of a hat, Switchfoot or Midnight Oil?
+  GT: midnight oil
+  Pred: Switchfoot
+[hotpotqa] #10 | EM=YES | F1=1.00 | Contain=YES | running EM=2/10 (20.00%) | running F1=0.20
+  Q: "Tunak", is a bhangra/pop love song by an artist born in which year ?
+  GT: 1967
+  Pred: 1967
+{
+  "total": 10,
+  "exact_match": 2,
+  "contains_match": 3,
+  "boxed_found": 7,
+  "exact_match_rate": 0.2,
+  "contains_match_rate": 0.3,
+  "boxed_found_rate": 0.7,
+  "avg_f1": 0.2,
+  "dataset": "hotpotqa",
+  "num_samples": 10,
+  "avg_latency_sec": 8.034740601904923,
+  "median_latency_sec": 3.5371477315056836
+}
+=== Overall ===
+{
+  "total": 10,
+  "exact_match": 2,
+  "contains_match": 3,
+  "boxed_found": 7,
+  "exact_match_rate": 0.2,
+  "contains_match_rate": 0.3,
+  "boxed_found_rate": 0.7,
+  "avg_f1": 0.2,
+  "dataset": "overall",
+  "num_samples": 10
+}
