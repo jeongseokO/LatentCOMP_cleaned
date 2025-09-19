@@ -1,0 +1,45 @@
+{
+  "summaries": [
+    {
+      "total": 1000,
+      "exact_match": 171,
+      "contains_match": 313,
+      "boxed_found": 543,
+      "exact_match_rate": 0.171,
+      "contains_match_rate": 0.313,
+      "boxed_found_rate": 0.543,
+      "avg_f1": 0.2546690347105186,
+      "dataset": "hotpotqa",
+      "num_samples": 1000,
+      "avg_latency_sec": 24.96976596506534,
+      "median_latency_sec": 10.7026653275243
+    }
+  ],
+  "overall": {
+    "total": 1000,
+    "exact_match": 171,
+    "contains_match": 313,
+    "boxed_found": 543,
+    "exact_match_rate": 0.171,
+    "contains_match_rate": 0.313,
+    "boxed_found_rate": 0.543,
+    "avg_f1": 0.2546690347105186,
+    "dataset": "overall",
+    "num_samples": 1000
+  },
+  "config": {
+    "repo_id": "jeongseokoh/LoPA_Llama3.1_8B_8_Lowers_assistant_10Specials",
+    "datasets": [
+      "hotpotqa"
+    ],
+    "max_new_tokens": 1024,
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "repetition_penalty": 1.0,
+    "lower_k": 8,
+    "mode": "tri",
+    "seed": 42,
+    "num_specials": 10,
+    "special_add_to": "assistant"
+  }
+}

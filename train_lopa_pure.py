@@ -22,7 +22,6 @@ import argparse
 import json
 import os
 import random
-from contextlib import nullcontext
 from pathlib import Path
 from typing import List, Optional, Tuple
 from copy import copy
@@ -32,16 +31,16 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split
 from tqdm import tqdm
 
+from accelerate import Accelerator
+try:
+    from accelerate import FullyShardedDataParallelPlugin, DeepSpeedPlugin
+except Exception:
+    FullyShardedDataParallelPlugin = None
+    DeepSpeedPlugin = None
+
 from transformers import AutoTokenizer, get_cosine_schedule_with_warmup
 
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
-
-from latentcomp_cleaned.dist_utils import (
-    build_accelerator,
-    extract_input_embedding_weight,
-    extract_module_parameter,
-    gather_state_dict,
-)
 
 
 # -----------------------
@@ -305,6 +304,31 @@ def lcp_len(a: torch.Tensor, b: torch.Tensor) -> int:
 # -----------------------
 # Accelerator builder
 # -----------------------
+def _build_accelerator(args) -> Accelerator:
+    if args.dtype == "bf16": mp = "bf16"
+    elif args.dtype == "fp16": mp = "fp16"
+    else: mp = "no"
+
+    auto_wrap = None
+    try:
+        from transformers.models.llama.modeling_llama import LlamaDecoderLayer as _L
+        auto_wrap = {"transformer_layer_cls_to_wrap": (_L,)}
+    except Exception:
+        pass
+
+    mode = getattr(args, "dist_mode", "ddp")
+    if mode == "fsdp" and FullyShardedDataParallelPlugin is not None:
+        fsdp = FullyShardedDataParallelPlugin(
+            sharding_strategy="FULL_SHARD", cpu_offload=False,
+            limit_all_gathers=True, use_orig_params=True,
+            auto_wrap_policy=auto_wrap,
+        )
+        return Accelerator(mixed_precision=mp, fsdp_plugin=fsdp)
+    if mode == "deepspeed" and DeepSpeedPlugin is not None:
+        ds = DeepSpeedPlugin(zero_stage=int(getattr(args, "zero_stage", 2)))
+        return Accelerator(mixed_precision=mp, deepspeed_plugin=ds)
+    return Accelerator(mixed_precision=mp)
+
 def _fork_cache_view(pkv):
     new = copy(pkv)
     if hasattr(pkv, "key_cache") and hasattr(pkv, "value_cache"):
@@ -319,20 +343,15 @@ def _fork_cache_view(pkv):
 # Train (TRI, BALANCED+TF FIX)
 # -----------------------
 def train(args):
+    accelerator = _build_accelerator(args)
     random.seed(args.seed); torch.manual_seed(args.seed); torch.cuda.manual_seed_all(args.seed)
+    device = accelerator.device
 
     # 1) Patch modeling BEFORE loading model
     modeling_path = Path(getattr(args, "lopa_modeling_path", "lopa_llama_modeling.py")).resolve()
     _require(modeling_path.exists(), f"lopa_modeling_path not found: {modeling_path}")
     llama_mod = load_custom_llama_modeling_TRI(modeling_path)
     LlamaForCausalLM = llama_mod.LlamaForCausalLM  # noqa
-
-    wrap_cls = None
-    if hasattr(llama_mod, "LlamaDecoderLayer"):
-        wrap_cls = (llama_mod.LlamaDecoderLayer,)
-
-    accelerator = build_accelerator(args, fsdp_wrap_cls=wrap_cls)
-    device = accelerator.device
 
     # 2) Tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, cache_dir=args.cache_dir_tokenizer, use_fast=True)
@@ -374,19 +393,7 @@ def train(args):
                 pass
 
     # 4) Model
-    ds_plugin = None
-    accel_state = getattr(accelerator, "state", None)
-    if accel_state is not None:
-        ds_plugin = getattr(accel_state, "deepspeed_plugin", None)
-    init_ctx = nullcontext()
-    if ds_plugin is not None and getattr(ds_plugin, "zero_stage", 0) >= 3:
-        init_ctx = getattr(ds_plugin, "zero3_init_context_manager", lambda: nullcontext())()
-    with init_ctx:
-        model = LlamaForCausalLM.from_pretrained(
-            args.model_name,
-            torch_dtype=dtype,
-            cache_dir=args.cache_dir_model,
-        )
+    model = LlamaForCausalLM.from_pretrained(args.model_name, torch_dtype=dtype, cache_dir=args.cache_dir_model)
     if train_special_embeddings:
         try:
             current = model.get_input_embeddings().weight.size(0)
@@ -419,7 +426,7 @@ def train(args):
             found = _infer_lora_targets_from_model(core)
             cli_targets = found or ["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"]
 
-        if accelerator.is_main_process:
+        if getattr(Accelerator(), "is_main_process", True):
             print(f"[LoRA] target_modules = {cli_targets}")
 
         lcfg = LoraConfig(
@@ -459,19 +466,6 @@ def train(args):
 
     optim = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=args.lr)
     model, optim, dl_train, dl_val = accelerator.prepare(model, optim, dl_train, dl_val)
-    accel_state = getattr(accelerator, "state", None)
-    ds_engine = None
-    if accel_state is not None:
-        ds_engine = getattr(accel_state, "deepspeed_engine", None)
-    if ds_engine is None and hasattr(model, "deepspeed_engine"):
-        ds_engine = getattr(model, "deepspeed_engine")
-    inference_model = None
-    if ds_engine is not None and hasattr(ds_engine, "module"):
-        inference_model = ds_engine.module
-    if inference_model is None and hasattr(model, "module"):
-        inference_model = model.module
-    if inference_model is None:
-        inference_model = model
 
     if accelerator.is_main_process:
         try:
@@ -553,7 +547,7 @@ def train(args):
         inp = torch.cat([header_delta, assistant_delta], dim=1)          # [H + A]
         labels = inp.clone()
         labels[:, :header_delta.size(1)] = -100                           # header는 로스 제외
-        out = inference_model.tri_step_logits(
+        out = model.tri_step_logits(
             assistant_ids=inp, lower_k=K, pkv=pkv, S=S_len, U=U_len,
             logits_to_keep=inp.size(1), labels=labels, write_cache=True
         )
@@ -563,7 +557,7 @@ def train(args):
         msgs, S_ids, SU_ids, SU_gen, user_delta, header_delta = _build_segments(q, d)
 
         # (1) S/U 프리필 — grad ON (응답별 독립 그래프)
-        pkv_su, S_len, U_len = inference_model.tri_build_caches(system_ids=S_ids, user_ids=user_delta, lower_k=K)
+        pkv_su, S_len, U_len = model.tri_build_caches(system_ids=S_ids, user_ids=user_delta, lower_k=K)
 
         # (2) Assistant delta 구성 (+ cap)
         assistant_delta = _assistant_content_delta(msgs, resp, SU_gen)
@@ -582,7 +576,7 @@ def train(args):
             msgs, S_ids, SU_ids, SU_gen, user_delta, header_delta = _build_segments(q, d)
             for resp in responses:
                 if not isinstance(resp, str) or not resp.strip(): continue
-                pkv_su, S_len, U_len = inference_model.tri_build_caches(S_ids, user_delta, lower_k=K)
+                pkv_su, S_len, U_len = model.tri_build_caches(S_ids, user_delta, lower_k=K)
                 ad = _assistant_content_delta(msgs, resp, SU_gen)
                 if ad.size(1) < 2:
                     continue
@@ -608,7 +602,7 @@ def train(args):
         bs = max(1, args.batch_size)
 
         for ad in eligible:
-            pkv_su, S_len, U_len = inference_model.tri_build_caches(system_ids=S_ids, user_ids=user_delta, lower_k=K)
+            pkv_su, S_len, U_len = model.tri_build_caches(system_ids=S_ids, user_ids=user_delta, lower_k=K)
             out = _tf_call(pkv_su, S_len, U_len, header_delta, ad)
             _require(out is not None and out.loss is not None and torch.isfinite(out.loss), "loss is NaN/inf")
             lval = float(out.loss.detach().item())
@@ -724,46 +718,35 @@ def train(args):
 
             base_dir = best_dir / "base"; base_dir.mkdir(parents=True, exist_ok=True)
             try:
-                state_dict = gather_state_dict(accelerator, model)
-                try:
-                    to_unwrap = accelerator.unwrap_model(model)
-                except Exception:
-                    to_unwrap = model
-
+                to_unwrap = accelerator.unwrap_model(model)
+                # PEFT 여부
                 is_peft = False
                 try:
                     from peft import PeftModel
                     is_peft = isinstance(to_unwrap, PeftModel)
                 except Exception:
                     pass
-
                 if is_peft:
                     from transformers.models.llama.modeling_llama import LlamaForCausalLM as _LM
                     base_clean = _LM.from_pretrained(args.model_name, torch_dtype=dtype, cache_dir=args.cache_dir_model)
                     if train_special_embeddings:
                         base_clean.resize_token_embeddings(len(tokenizer))
-                        embed_weight = extract_input_embedding_weight(to_unwrap, state_dict)
-                        clean_inp = base_clean.get_input_embeddings()
-                        if embed_weight is not None and clean_inp is not None:
-                            clean_inp.weight.data.copy_(embed_weight.to(clean_inp.weight.dtype))
                         trained_base = _unwrap_peft(to_unwrap)
+                        trained_inp = trained_base.get_input_embeddings()
+                        clean_inp = base_clean.get_input_embeddings()
+                        if trained_inp is not None and clean_inp is not None:
+                            clean_inp.weight.data.copy_(trained_inp.weight.detach().to(clean_inp.weight.dtype))
                         trained_head = getattr(trained_base, "lm_head", None)
                         clean_head = getattr(base_clean, "lm_head", None)
-                        if clean_head is not None and trained_head is not None and hasattr(clean_head, "weight"):
-                            head_weight = extract_module_parameter(to_unwrap, trained_head, state_dict, "weight")
-                            if head_weight is not None:
-                                clean_head.weight.data.copy_(head_weight.to(clean_head.weight.dtype))
+                        if (clean_head is not None and trained_head is not None and
+                                hasattr(clean_head, "weight") and hasattr(trained_head, "weight") and
+                                clean_head.weight.size() == trained_head.weight.size()):
+                            clean_head.weight.data.copy_(trained_head.weight.detach().to(clean_head.weight.dtype))
                     base_clean.save_pretrained(base_dir, safe_serialization=True)
                     (best_dir / "lora").mkdir(parents=True, exist_ok=True)
-                    try:
-                        from peft import get_peft_model_state_dict
-                        adapter_state = get_peft_model_state_dict(to_unwrap)
-                        adapter_state = {k: v.detach().cpu() for k, v in adapter_state.items()}
-                    except Exception:
-                        adapter_state = None
-                    to_unwrap.save_pretrained(best_dir / "lora", state_dict=adapter_state)
+                    to_unwrap.save_pretrained(best_dir / "lora")
                 else:
-                    to_unwrap.save_pretrained(base_dir, safe_serialization=True, state_dict=state_dict)
+                    to_unwrap.save_pretrained(base_dir, safe_serialization=True)
             except Exception as e:
                 raise RuntimeError(f"Failed to save best: {e}")
 

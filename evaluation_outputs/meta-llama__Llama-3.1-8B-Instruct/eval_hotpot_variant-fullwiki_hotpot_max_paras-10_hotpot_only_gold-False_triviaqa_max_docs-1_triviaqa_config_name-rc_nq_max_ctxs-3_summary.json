@@ -1,0 +1,45 @@
+{
+  "summaries": [
+    {
+      "total": 1000,
+      "exact_match": 322,
+      "contains_match": 584,
+      "boxed_found": 931,
+      "exact_match_rate": 0.322,
+      "contains_match_rate": 0.584,
+      "boxed_found_rate": 0.931,
+      "avg_f1": 0.4972191230282271,
+      "dataset": "nq",
+      "num_samples": 1000,
+      "avg_latency_sec": 7.7550742820966985,
+      "median_latency_sec": 6.237676167511381
+    }
+  ],
+  "overall": {
+    "total": 1000,
+    "exact_match": 322,
+    "contains_match": 584,
+    "boxed_found": 931,
+    "exact_match_rate": 0.322,
+    "contains_match_rate": 0.584,
+    "boxed_found_rate": 0.931,
+    "avg_f1": 0.4972191230282271,
+    "dataset": "overall",
+    "num_samples": 1000
+  },
+  "config": {
+    "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+    "datasets": [
+      "nq"
+    ],
+    "max_new_tokens": 1024,
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "repetition_penalty": 1.0,
+    "lower_k": null,
+    "mode": "vanilla",
+    "seed": 42,
+    "num_specials": 10,
+    "special_add_to": "assistant"
+  }
+}

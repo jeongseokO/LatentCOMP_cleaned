@@ -9,6 +9,7 @@ LatentCOMP_cleaned/
 triviaqa_hotpotqa_6000_merged2.jsonl
 run.sh
 test.sh
+eval.sh
 # Evaluation scripts
 evaluate/run_eval.sh
 # Explicit secret files only (avoid overmatching code/config)

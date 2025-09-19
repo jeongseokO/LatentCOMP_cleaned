@@ -227,6 +227,19 @@ class LlamaAttention(nn.Module):
         # fold heads, project out
         attn_output = attn_output.reshape(*input_shape, -1).contiguous()
         attn_output = self.o_proj(attn_output)
+
+        # ---------- (NEW) Optional attention recording ----------
+        if bool(kwargs.get("record_attn", False)):
+            try:
+                # Save on CPU in float32 to reduce GPU pressure.
+                self._last_attn = attn_weights.detach().to(torch.float32).cpu()  # [B,H,Tq,Tk]
+                Tq = int(self._last_attn.shape[2]); Tk = int(self._last_attn.shape[3])
+                self._last_meta = {"layer_idx": int(getattr(self, "layer_idx", -1)),
+                                   "Tq": Tq, "Tk": Tk}
+            except Exception:
+                pass
+        # --------------------------------------------------------
+
         return attn_output, attn_weights
 
 
@@ -483,7 +496,7 @@ def tri_prefill_system_all(
 
     attn_impl = getattr(self.config, "_attn_implementation", "eager")
     if attn_impl == "flash_attention_2":
-        causal_mask = None  # FA2는 내부 causal 사용 + pad mask만 허용
+        causal_mask = None  # FA2 uses internal causal + pad only
     else:
         causal_mask = create_causal_mask(
             config=self.config,
@@ -578,6 +591,7 @@ def tri_forward_assistant(
     S: int,
     U: int,
     write_cache: bool = True,
+    **kwargs,
 ):
     device = assistant_ids.device
     B, T = assistant_ids.shape
@@ -592,7 +606,7 @@ def tri_forward_assistant(
     # Lower global causal mask
     attn_impl = getattr(self.config, "_attn_implementation", "eager")
     if attn_impl == "flash_attention_2":
-        causal_mask_global = None   # FA2: 마스크 전달하지 않음(내부 causal 사용)
+        causal_mask_global = None   # FA2: internal causal only
     else:
         attn_mask_tokens = torch.ones((B, prefix_global + T), device=device, dtype=torch.long)
         causal_mask_global = create_causal_mask(
@@ -612,7 +626,6 @@ def tri_forward_assistant(
         past_len_li = _layer_past_len(pkv, li)  # LOWER: S+U+A_prev, UPPER: S+A_prev
 
         if attn_impl == "flash_attention_2":
-            # FA2: 마스크를 쓰지 않는다. (causal은 내부에서 처리, Upper의 U 배제는 pkv 길이로 보장)
             attn_mask_layer = None
         else:
             if li < lower_k:
@@ -628,6 +641,7 @@ def tri_forward_assistant(
             use_cache=write_cache,
             cache_position=cp_global,          # GLOBAL cache_position
             position_embeddings=pos_emb_g,
+            **kwargs,                          # <- pass through record_attn if provided
         )
 
     hidden_states = self.norm(hidden_states)
@@ -689,6 +703,7 @@ def _tri_forward_assistant_api(
     S: int,
     U: int,
     write_cache: bool = True,
+    **kwargs,
 ):
     core = _unwrap_llama_core(self)  # -> LlamaModel
     if not hasattr(core, "tri_forward_assistant"):
@@ -699,6 +714,7 @@ def _tri_forward_assistant_api(
         pkv=pkv,
         S=S, U=U,
         write_cache=write_cache,
+        **kwargs,
     )
 
 
@@ -712,6 +728,7 @@ def tri_step_logits(
     logits_to_keep: Union[int, torch.Tensor] = 0,
     labels: Optional[torch.LongTensor] = None,
     write_cache: bool = True,
+    **kwargs,
 ):
     core = _unwrap_llama_core(self)  # -> LlamaModel
     if not hasattr(core, "tri_forward_assistant"):
@@ -723,6 +740,7 @@ def tri_step_logits(
         pkv=pkv,
         S=S, U=U,
         write_cache=write_cache,
+        **kwargs,
     )
     hidden = out.last_hidden_state
     sl = slice(-logits_to_keep, None) if isinstance(logits_to_keep, int) else logits_to_keep

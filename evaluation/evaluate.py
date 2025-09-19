@@ -219,6 +219,10 @@ def build_argparser() -> argparse.ArgumentParser:
                         help="Store combined document string in output (may be large)")
     parser.add_argument("--device", type=str, default=None, help="Explicit device (cpu/cuda)")
     parser.add_argument("--dtype", type=str, choices=["auto", "bf16", "fp16", "fp32"], default="auto")
+    parser.add_argument("--num-specials", type=int, default=0,
+                        help="Number of Latent special tokens to inject during evaluation")
+    parser.add_argument("--special-add-to", type=str, choices=["none", "user", "assistant"], default="none",
+                        help="Where to add Latent special tokens (user prompt or assistant output)")
 
     parser.add_argument("--base-subfolder", type=str, default="base")
     parser.add_argument("--lora-subfolder", type=str, default="lora")
@@ -282,6 +286,8 @@ def main() -> None:
         repetition_penalty=args.repetition_penalty,
         seed_text=args.seed_text,
         use_tri=use_tri,
+        num_specials=args.num_specials,
+        special_add_to=args.special_add_to,
     )
 
     setup_seed(args.seed)
@@ -363,6 +369,8 @@ def main() -> None:
                 "lower_k": runner.lower_k,
                 "mode": "tri" if use_tri else "vanilla",
                 "seed": args.seed,
+                "num_specials": args.num_specials,
+                "special_add_to": args.special_add_to,
             },
         }
         summary_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")

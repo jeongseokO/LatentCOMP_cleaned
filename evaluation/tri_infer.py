@@ -30,6 +30,8 @@ class TRIModelConfig:
     device: Optional[str] = None
     dtype: Optional[torch.dtype] = None
     use_tri: bool = True
+    num_specials: int = 0
+    special_add_to: str = "none"
 
 
 class TRIModelRunner:
@@ -46,10 +48,18 @@ class TRIModelRunner:
                 self.dtype = torch.float16
             else:
                 self.dtype = torch.float32
+        self.num_specials = max(0, int(cfg.num_specials))
+        special_target = (cfg.special_add_to or "none").lower()
+        self.special_add_to = special_target if special_target in {"user", "assistant"} else "none"
+        self.special_tokens: List[str] = []
+        self.specials_joined: str = ""
+        self.assistant_prefix_ids: Optional[torch.Tensor] = None
+        self.assistant_prefix_text: str = ""
         torch.set_grad_enabled(False)
         if self.use_tri:
             self._load_modeling(cfg.modeling_path)
         self._load_tokenizer()
+        self._setup_special_tokens()
         self._load_model()
         self.default_gen_kwargs = {
             "max_new_tokens": cfg.max_new_tokens,
@@ -84,6 +94,20 @@ class TRIModelRunner:
         self.tokenizer = AutoTokenizer.from_pretrained(cfg.repo_id, use_fast=True, token=cfg.hf_token)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
+
+    def _setup_special_tokens(self) -> None:
+        if self.num_specials <= 0:
+            return
+        self.special_tokens = [f"<|Latent{i}|>" for i in range(1, self.num_specials + 1)]
+        self.specials_joined = " ".join(self.special_tokens)
+        vocab = self.tokenizer.get_vocab()
+        missing = [tok for tok in self.special_tokens if tok not in vocab]
+        if missing:
+            print(f"[warn] Special tokens missing from tokenizer vocab: {missing}")
+        if self.special_add_to == "assistant" and self.specials_joined:
+            prefix_ids = self.tokenizer(self.specials_joined, add_special_tokens=False, return_tensors="pt").input_ids
+            self.assistant_prefix_ids = prefix_ids.to(self.device)
+            self.assistant_prefix_text = self.specials_joined
 
     def _load_model(self) -> None:
         cfg = self.cfg
@@ -207,6 +231,10 @@ class TRIModelRunner:
         opts = {**self.default_gen_kwargs, **gen_kwargs}
         lower_k = opts.pop("lower_k", self.lower_k)
         msgs = self.build_messages(system, document, question, include_query=True)
+        if self.specials_joined and self.special_add_to == "user":
+            user_content = msgs[-1]["content"]
+            sep = "\n\n" if not user_content.endswith("\n") else ""
+            msgs[-1]["content"] = f"{user_content}{sep}{self.specials_joined}"
         system_ids = self.tokens_from_messages(msgs[:1], add_generation_prompt=False)
         su_ids = self.tokens_from_messages(msgs, add_generation_prompt=False)
         su_gen = self.tokens_from_messages(msgs, add_generation_prompt=True)
@@ -215,6 +243,11 @@ class TRIModelRunner:
         header_delta = su_gen[:, su_ids.size(1):]
         caches, sys_len, user_len = self.model.tri_build_caches(system_ids, user_delta, lower_k=lower_k)
         head = header_delta
+        forced_prefix_ids: Optional[List[int]] = None
+        if self.assistant_prefix_ids is not None and self.special_add_to == "assistant":
+            prefix_ids = self.assistant_prefix_ids.to(self.device)
+            head = torch.cat([head, prefix_ids], dim=1)
+            forced_prefix_ids = prefix_ids[0].tolist()
         seed = opts.get("seed") or ""
         if seed:
             seed_ids = self.tokenizer(seed, add_special_tokens=False, return_tensors="pt").input_ids.to(self.device)
@@ -235,13 +268,34 @@ class TRIModelRunner:
             prev = torch.tensor(generated, device=logits.device, dtype=torch.long).unsqueeze(0)
             current = self.sample_top_p(logits, opts["temperature"], opts["top_p"], opts["repetition_penalty"], prev)
             current = current.unsqueeze(0).to(self.device)
-        return self.tokenizer.decode(generated, skip_special_tokens=True)
+        decoded = self.tokenizer.decode(generated, skip_special_tokens=True)
+        if forced_prefix_ids and self.assistant_prefix_text:
+            suffix = decoded
+            if suffix and not suffix[0].isspace():
+                suffix = " " + suffix
+            return f"{self.assistant_prefix_text}{suffix}"
+        return decoded
 
     def _generate_vanilla(self, system: str, document: str, question: str, **gen_kwargs) -> str:
         opts = {**self.default_gen_kwargs, **gen_kwargs}
         msgs = self.build_messages(system, document, question, include_query=True)
+        if self.specials_joined and self.special_add_to == "user":
+            user_content = msgs[-1]["content"]
+            sep = "\n\n" if not user_content.endswith("\n") else ""
+            msgs[-1]["content"] = f"{user_content}{sep}{self.specials_joined}"
         input_ids = self.tokens_from_messages(msgs, add_generation_prompt=True)
-        seed = opts.get("seed") or ""
+        base_seed = opts.get("seed") or ""
+        seed = base_seed
+        forced_prefix_text = ""
+        if self.specials_joined and self.special_add_to == "assistant":
+            forced_prefix_text = self.specials_joined
+            seed = forced_prefix_text
+            if base_seed:
+                if not base_seed[0].isspace():
+                    seed += " "
+                seed += base_seed
+            else:
+                seed += " "
         if seed:
             seed_ids = self.tokenizer(seed, add_special_tokens=False, return_tensors="pt").input_ids.to(self.device)
             input_ids = torch.cat([input_ids, seed_ids], dim=1)
@@ -258,7 +312,13 @@ class TRIModelRunner:
             eos_token_id=self.tokenizer.eos_token_id,
         )
         gen_ids = generation[0, input_ids.size(1):]
-        return self.tokenizer.decode(gen_ids, skip_special_tokens=True)
+        decoded = self.tokenizer.decode(gen_ids, skip_special_tokens=True)
+        if forced_prefix_text:
+            suffix = decoded
+            if suffix and not suffix[0].isspace():
+                suffix = " " + suffix
+            return f"{forced_prefix_text}{suffix}"
+        return decoded
 
 
 __all__ = ["TRIModelConfig", "TRIModelRunner"]
