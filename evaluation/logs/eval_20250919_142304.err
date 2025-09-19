@@ -1,0 +1,4 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+srun: got SIGCONT
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files:  25%|██▌       | 1/4 [07:02<21:06, 422.14s/it]Fetching 4 files:  50%|█████     | 2/4 [07:02<05:48, 174.32s/it]slurmstepd-n01: error: *** STEP 79674.0 ON n01 CANCELLED AT 2025-09-19T15:12:28 ***

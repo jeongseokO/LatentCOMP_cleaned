@@ -1,0 +1,140 @@
+{"timestamp":"2025-09-18T17:58:28.864498Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.864541Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 914.688365ms before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.864695Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.864704Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 2.35303139s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.864631Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.864841Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.864849Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 2.679501679s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.864890Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 2.964948586s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.864955Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.864962Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.166679042s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.864812Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.865050Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 2.755426131s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.865123Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.865141Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 2.533184482s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.864857Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.864977Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.865157Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.865183Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 215.269666ms before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.865175Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.94519328s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.865188Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 465.094518ms before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.865362Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.865372Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.967627645s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.865432Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.865448Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.947249982s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.865453Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.865466Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 275.381007ms before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.865491Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.865482Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.865497Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 348.604088ms before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.865504Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 2.581237764s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.865667Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.865685Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 2.413477373s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.865680Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.865696Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 2.960299308s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.865908Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.865926Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 651.561517ms before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.866080Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.866127Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.334775883s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.866129Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.866141Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.102618389s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.870863Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.870881Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.330619684s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.870908Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.870923Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 596.209572ms before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.871155Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.871182Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.836981671s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.871204Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.871221Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.875800844s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.871428Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.871441Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.46645499s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.871477Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.871492Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 2.359429207s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.871778Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.871791Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 319.613173ms before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.871796Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.871811Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 72.720133ms before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.872120Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.872133Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 2.869697827s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.872136Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.872150Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.713210381s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.872344Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.872356Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.380329163s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.872424Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.872439Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 997.274ms before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.872599Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.872631Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 1.977367317s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+{"timestamp":"2025-09-18T17:58:28.872643Z","level":"WARN","fields":{"message":"Reqwest(reqwest::Error { kind: Request, source: hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: UnexpectedEof, error: \"tls handshake eof\" } }) }). Retrying..."},"filename":"/home/runner/work/xet-core/xet-core/cas_client/src/http_client.rs","line_number":242}
+{"timestamp":"2025-09-18T17:58:28.872668Z","level":"WARN","fields":{"message":"Retry attempt #0. Sleeping 2.211557262s before the next attempt"},"filename":"/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-retry-0.7.0/src/middleware.rs","line_number":171}
+=== Evaluating hotpotqa ===
+[HotpotQA] Loading dataset...
+HotpotQA variant: distractor
+hotpot_only_gold=True → using only supporting_facts paragraphs.
+Using up to 10 paragraphs per question.
+[hotpotqa] #1 | EM=NO | F1=0.00 | Contain=NO | running EM=0/1 (0.00%) | running F1=0.00
+  Q: What was Iqbal F. Qadir on when he participated in an attack on a radar station located on western shore of the Okhamandal Peninsula?
+  GT: flotilla
+  Pred: No Match
+[hotpotqa] #2 | EM=NO | F1=0.00 | Contain=NO | running EM=0/2 (0.00%) | running F1=0.00
+  Q: When did the park at which Tivolis Koncertsal is located open?
+  GT: 15 august 1843
+  Pred: No Match
+[hotpotqa] #3 | EM=NO | F1=0.00 | Contain=NO | running EM=0/3 (0.00%) | running F1=0.00
+  Q: What is the shared country of ancestry between Art Laboe and Scout Tufankjian?
+  GT: armenian
+  Pred: No Match
+[hotpotqa] #4 | EM=NO | F1=0.00 | Contain=NO | running EM=0/4 (0.00%) | running F1=0.00
+  Q: The school in which the Wilmslow Show is held is designated as what?
+  GT: centre of excellence
+  Pred: No Match
+[hotpotqa] #5 | EM=NO | F1=0.00 | Contain=NO | running EM=0/5 (0.00%) | running F1=0.00
+  Q: Who will Billy Howle be seen opposite in the upcoming British drama film directed by Dominic Cooke?
+  GT: saoirse ronan
+  Pred: No Match
+[hotpotqa] #6 | EM=NO | F1=0.00 | Contain=NO | running EM=0/6 (0.00%) | running F1=0.00
+  Q: What animated movie, starring Danny Devito, featured music written and produced by Kool Kojak?
+  GT: lorax
+  Pred: No Match
+[hotpotqa] #7 | EM=NO | F1=0.00 | Contain=NO | running EM=0/7 (0.00%) | running F1=0.00
+  Q: Out of the actors who have played the role of Luc Deveraux in the Universal Soldier franchise, which actor has also starred in the movies Holby City, Doctor ...
+  GT: scott adkins
+  Pred: No Match
+[hotpotqa] #8 | EM=NO | F1=0.00 | Contain=NO | running EM=0/8 (0.00%) | running F1=0.00
+  Q: Tommy's Honour was a drama film that included the actor who found success with what 2016 BBC miniseries?
+  GT: war peace
+  Pred: No Match
+[hotpotqa] #9 | EM=NO | F1=0.00 | Contain=NO | running EM=0/9 (0.00%) | running F1=0.00
+  Q: Which rock band chose its name by drawing it out of a hat, Switchfoot or Midnight Oil?
+  GT: midnight oil
+  Pred: No Match
+[hotpotqa] #10 | EM=NO | F1=0.00 | Contain=NO | running EM=0/10 (0.00%) | running F1=0.00
+  Q: "Tunak", is a bhangra/pop love song by an artist born in which year ?
+  GT: 1967
+  Pred: No Match
+{
+  "total": 10,
+  "exact_match": 0,
+  "contains_match": 0,
+  "boxed_found": 0,
+  "exact_match_rate": 0.0,
+  "contains_match_rate": 0.0,
+  "boxed_found_rate": 0.0,
+  "avg_f1": 0.0,
+  "dataset": "hotpotqa",
+  "num_samples": 10,
+  "avg_latency_sec": 2.215335053007584,
+  "median_latency_sec": 1.9836154090007767
+}
+=== Overall ===
+{
+  "total": 10,
+  "exact_match": 0,
+  "contains_match": 0,
+  "boxed_found": 0,
+  "exact_match_rate": 0.0,
+  "contains_match_rate": 0.0,
+  "boxed_found_rate": 0.0,
+  "avg_f1": 0.0,
+  "dataset": "overall",
+  "num_samples": 10
+}

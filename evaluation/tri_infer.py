@@ -94,11 +94,22 @@ class TRIModelRunner:
                 subfolder=cfg.base_subfolder,
                 torch_dtype=self.dtype,
                 token=cfg.hf_token,
+                cache_dir="/data2/jeongseokoh/hub"
             ).to(self.device)
             try:
                 from peft import PeftModel
                 if cfg.lora_subfolder:
-                    model = PeftModel.from_pretrained(model, cfg.repo_id, subfolder=cfg.lora_subfolder, token=cfg.hf_token)
+                    peft_model = PeftModel.from_pretrained(
+                        model,
+                        cfg.repo_id,
+                        subfolder=cfg.lora_subfolder,
+                        token=cfg.hf_token,
+                        cache_dir="/data2/jeongseokoh/hub"
+                    )
+                    try:
+                        model = peft_model.merge_and_unload()
+                    except Exception:
+                        model = peft_model
                     model = model.to(self.device)
             except Exception:
                 pass
@@ -112,11 +123,22 @@ class TRIModelRunner:
                 cfg.repo_id,
                 torch_dtype=self.dtype,
                 token=cfg.hf_token,
+                cache_dir="/data2/jeongseokoh/hub"
             ).to(self.device)
             try:
                 from peft import PeftModel
                 if cfg.lora_subfolder:
-                    model = PeftModel.from_pretrained(model, cfg.repo_id, subfolder=cfg.lora_subfolder, token=cfg.hf_token)
+                    peft_model = PeftModel.from_pretrained(
+                        model,
+                        cfg.repo_id,
+                        subfolder=cfg.lora_subfolder,
+                        token=cfg.hf_token,
+                        cache_dir="/data2/jeongseokoh/hub"
+                    )
+                    try:
+                        model = peft_model.merge_and_unload()
+                    except Exception:
+                        model = peft_model
                     model = model.to(self.device)
             except Exception:
                 pass

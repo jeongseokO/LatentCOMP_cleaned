@@ -1,0 +1,22 @@
+W0919 14:14:56.145000 4067582 site-packages/torch/distributed/run.py:793] 
+W0919 14:14:56.145000 4067582 site-packages/torch/distributed/run.py:793] *****************************************
+W0919 14:14:56.145000 4067582 site-packages/torch/distributed/run.py:793] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0919 14:14:56.145000 4067582 site-packages/torch/distributed/run.py:793] *****************************************
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:03,  1.30s/it]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:04,  1.53s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:02<00:02,  1.49s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:03,  1.58s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:04<00:01,  1.52s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:04<00:01,  1.57s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:05<00:00,  1.13s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:05<00:00,  1.25s/it]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:05<00:00,  1.09s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:05<00:00,  1.27s/it]
+The new embeddings will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+The new embeddings will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+The new lm_head weights will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+The new lm_head weights will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+wandb: Currently logged in as: luke0112. Use `wandb login --relogin` to force relogin
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+wandb: - Waiting for wandb.init()...wandb: \ Waiting for wandb.init()...wandb: | Waiting for wandb.init()...wandb: / Waiting for wandb.init()...wandb: - Waiting for wandb.init()...wandb: \ Waiting for wandb.init()...wandb: Tracking run with wandb version 0.19.2
+wandb: Run data is saved locally in /data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/wandb/run-20250919_141607-e1icajkh
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run LoPA_Llama3.1_8B_8_Lowers_assistant_20Specials
+wandb: ⭐️ View project at https://wandb.ai/luke0112/latentcomp-cleaned
+wandb: 🚀 View run at https://wandb.ai/luke0112/latentcomp-cleaned/runs/e1icajkh
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+srun: got SIGCONT

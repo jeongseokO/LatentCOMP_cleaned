@@ -76,6 +76,10 @@ def parse_args():
     p.add_argument("--use_lora", action="store_true")
     # LOPA experiment: cut gen at prefill_layers as well
     p.add_argument("--also_cut_gen", action="store_true", help="If set (LOPA only), run gen with layers_limit=prefill_layers")
+    # LoPA trainer-specific toggles
+    p.add_argument("--responses_sequential", action="store_true", default=True,
+                   help="LoPA only: process group responses sequentially (default)")
+    p.add_argument("--no_responses_sequential", dest="responses_sequential", action="store_false")
     # distributed / sharding (forwarded to lopa pure trainer)
     p.add_argument("--dist_mode", type=str, choices=["ddp", "fsdp", "deepspeed"], default="ddp")
     p.add_argument("--zero_stage", type=int, default=2)

@@ -81,6 +81,17 @@ def setup_seed(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
+def is_oom_error(err: BaseException) -> bool:
+    """Return True if the exception corresponds to an out-of-memory failure."""
+    oom_cls = getattr(torch.cuda, "OutOfMemoryError", None)
+    if oom_cls is not None and isinstance(err, oom_cls):
+        return True
+    if isinstance(err, MemoryError):
+        return True
+    message = str(err).lower()
+    return "out of memory" in message
+
+
 def evaluate_dataset(
     name: str,
     dataset_cfg: Dict[str, object],
@@ -110,7 +121,15 @@ def evaluate_dataset(
             sep = dataset_cfg.get("doc_separator", "\n\n----[DOC SEP]----\n\n")
             doc = sep.join(docs)
         start_time = time.perf_counter()
-        prediction = runner.generate(system_prompt, doc, question, **gen_kwargs)
+        try:
+            prediction = runner.generate(system_prompt, doc, question, **gen_kwargs)
+        except Exception as err:
+            if not is_oom_error(err):
+                raise
+            print(f"[{name}] #{idx + 1} | Out of memory encountered; skipping sample.")
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            continue
         latency = time.perf_counter() - start_time
         scored = score_prediction(prediction, sample.get("ground_truths", []))
         if scored.exact_match:
@@ -136,7 +155,7 @@ def evaluate_dataset(
         results.append(record)
         scored_items.append(scored)
         latencies.append(latency)
-        cur_total = idx + 1
+        cur_total = len(results)
         running_acc = em_count / cur_total if cur_total else 0.0
         q_preview = _clip_text(sample.get("question") or question, 160)
         gt_preview = _clip_text("; ".join(scored.ground_truths), 160)

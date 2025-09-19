@@ -1,0 +1,2367 @@
+=== Evaluating triviaqa ===
+[TriviaQA] Loading dataset...
+Using up to 1 documents per question.
+[triviaqa] #1 | EM=YES | F1=1.00 | Contain=YES | running EM=1/1 (100.00%) | running F1=1.00
+  Q: Which Scottish League football team is nicknamed the Pars
+  GT: pars; dunfermline athletic football club; dunfermline f c; dunfermline athletic f c; dunfermline athletic; dunfermline athletic fc; dunfermline fc; dunfermli...
+  Pred: Dunfermline Athletic Football Club
+[triviaqa] #2 | EM=NO | F1=0.05 | Contain=YES | running EM=1/2 (50.00%) | running F1=0.52
+  Q: Which Canadian born actor played an Irishman in The Eagle Has Landed
+  GT: sutherland; south east sutherland; sutherlandshire; sutherland local government district highland region; cataibh; county of sutherland; north west sutherlan...
+  Pred: No Match
+[triviaqa] #3 | EM=YES | F1=1.00 | Contain=YES | running EM=2/3 (66.67%) | running F1=0.68
+  Q: Which English city has the most canals
+  GT: birmingham england; birminghamian; birmingham artistic figures; birmingham; birmingham uk; weather in birmingham; birmingham united kingdom; county borough o...
+  Pred: Birmingham
+[triviaqa] #4 | EM=NO | F1=0.25 | Contain=YES | running EM=2/4 (50.00%) | running F1=0.57
+  Q: What kind of bird is a Blue Orpington
+  GT: bock bock; g gallus domesticus; g domesticus; 🐔; poulet; chicken drumsticks; layer hen; domestic fowl; chicket; chicken chasseur; chiken; chicken bird; commo...
+  Pred: Blue Orpington is a type of chicken breed.
+[triviaqa] #5 | EM=NO | F1=0.00 | Contain=NO | running EM=2/5 (40.00%) | running F1=0.46
+  Q: What is the small club used for killing landed fish called
+  GT: priest film; priest; priest movie; priest disambiguation
+  Pred: macana
+[triviaqa] #6 | EM=YES | F1=1.00 | Contain=YES | running EM=3/6 (50.00%) | running F1=0.55
+  Q: In the Christian calendar what is the first day of Holy Week
+  GT: fir sunday; jesus on donkey; branch sunday; palm sundays; yew sunday; palm sunday; flowery sunday
+  Pred: Palm Sunday
+[triviaqa] #7 | EM=NO | F1=0.00 | Contain=YES | running EM=3/7 (42.86%) | running F1=0.47
+  Q: Gingivitis affects which part of the body
+  GT: gingivae; gingival; gumline; uletic; gum anatomy; gum line; gingiva; marginal gingivae; gums
+  Pred: heart and other parts of the body
+[triviaqa] #8 | EM=YES | F1=1.00 | Contain=YES | running EM=4/8 (50.00%) | running F1=0.54
+  Q: What is the name of the island formed by volcanic action off the south coast of Iceland in 1963
+  GT: surtsey iceland; surtsey
+  Pred: Surtsey
+[triviaqa] #9 | EM=YES | F1=1.00 | Contain=YES | running EM=5/9 (55.56%) | running F1=0.59
+  Q: Burnside was a spin off from which Australia series
+  GT: bill previous episode; bill tv series; sunhill siege 2007; pc samuel harker; douglas wright bill; bill on itv; sun hill police station; chief superintendent ...
+  Pred: THE BILL
+[triviaqa] #10 | EM=NO | F1=0.00 | Contain=YES | running EM=5/10 (50.00%) | running F1=0.53
+  Q: If you had two eight enders in one bonspiel what are you playing
+  GT: curling sheet; curling rink; curling shoes; button curling; hammer curling; curling stone; roaring game; curling sport; curling; sweeping sport; curling broo...
+  Pred: cashspiel
+[triviaqa] #11 | EM=NO | F1=0.29 | Contain=YES | running EM=5/11 (45.45%) | running F1=0.51
+  Q: Which of the herbal teas is supposed to aid relaxation and sleep
+  GT: chamomile tea; camomill; camomile tea; chamomille; chamomile; cammomile; camomiles; chamomile flower; wild chamomile; camomile
+  Pred: Valerian root, Blue vervain, Catnip, Chamomile, Lemon balm, Passionflower, Hops, Green tea
+[triviaqa] #12 | EM=YES | F1=1.00 | Contain=YES | running EM=6/12 (50.00%) | running F1=0.55
+  Q: In which street did the Great Fire of London originate
+  GT: pudding lane
+  Pred: Pudding Lane
+[triviaqa] #13 | EM=YES | F1=1.00 | Contain=YES | running EM=7/13 (53.85%) | running F1=0.58
+  Q: What flower was named after the Duke of Cumberland
+  GT: sweet william; dianthus barbatus interspecific; dianthus barbatus; sweetwilliam
+  Pred: Sweet William
+[triviaqa] #14 | EM=YES | F1=1.00 | Contain=YES | running EM=8/14 (57.14%) | running F1=0.61
+  Q: What colour on the London underground map is the District Line
+  GT: greenishness; color green; 0 255 0; green color; green; rgb 0 255 0; avacado color; greenest; list of terms associated with color green; greenness; greenishl...
+  Pred: green
+[triviaqa] #15 | EM=NO | F1=0.00 | Contain=NO | running EM=8/15 (53.33%) | running F1=0.57
+  Q: What word links take, write and stand
+  GT: under; under disambiguation
+  Pred: to
+[triviaqa] #16 | EM=NO | F1=0.50 | Contain=YES | running EM=8/16 (50.00%) | running F1=0.57
+  Q: What is the fifth event in the heptathlon
+  GT: farthest jumper; long jump sport; long jumping; long jump; long jumper; longjumper; longjump; broad jump; running long jump
+  Pred: high jump
+[triviaqa] #17 | EM=NO | F1=0.07 | Contain=YES | running EM=8/17 (47.06%) | running F1=0.54
+  Q: Who is universally accepted to be the first Roman Emperor (27bc)
+  GT: julius caesar octavianus; octavian caesar; caesar octavianus; octavius caesar; emperor augustus; gaius julius caesar octavianus; gaius julius caesar augustus...
+  Pred: No Match
+[triviaqa] #18 | EM=YES | F1=1.00 | Contain=YES | running EM=9/18 (50.00%) | running F1=0.56
+  Q: In which country was Rita Ora born
+  GT: republika e kosovës; state of kosova; kosovo region; kosvo; косово и метохија; cosovo; culture of kosovo; kosovci; etymology of kosovo; kocobo; kosmet; kosov...
+  Pred: Kosovo
+[triviaqa] #19 | EM=YES | F1=1.00 | Contain=YES | running EM=10/19 (52.63%) | running F1=0.59
+  Q: Who played Doctor Christmas Jones in the Bond film The World is Not enough
+  GT: denise richards; deniserichards; denise richard; denise lee richards
+  Pred: Denise Richards
+[triviaqa] #20 | EM=YES | F1=1.00 | Contain=YES | running EM=11/20 (55.00%) | running F1=0.61
+  Q: In which county did Eccles cakes originate
+  GT: lancashire administration county; lancastershire; county palatine of lancaster; county of lancaster; lancashire; lancashire enterprise zone; lancashire count...
+  Pred: Lancashire
+[triviaqa] #21 | EM=NO | F1=0.00 | Contain=NO | running EM=11/21 (52.38%) | running F1=0.58
+  Q: What colour is the wax covering Gouda cheese
+  GT: rgb 255 255 0; yellow colour; royal yellow; dark yellow; 255 255 0; yellower; yellow color; yelow; whiteyellow; yellowishness; white yellow; yellow white; ye...
+  Pred: black
+[triviaqa] #22 | EM=NO | F1=0.06 | Contain=NO | running EM=11/22 (50.00%) | running F1=0.55
+  Q: What is the main ingredient of the Mexican breakfast dish huervos rancheros
+  GT: egg; wind egg; biology of eggs; insect egg; egg bird; wind eggs; birds eggs; fish egg; egg biology; infertile eggs; windeggs; eggs; egg avian; egg cases; inf...
+  Pred: No Match
+[triviaqa] #23 | EM=YES | F1=1.00 | Contain=YES | running EM=12/23 (52.17%) | running F1=0.57
+  Q: Who is the subject of London's first nude statue which stands in Hyde Park
+  GT: achillean; achle; akilles; akhilleus aiákidês; akkilles; pelides; akhilles; achilles; ἀχιλλεύς; achillies; akhilleus aiakides; peleion; akhilleus; αχιλλέας; ...
+  Pred: Achilles
+[triviaqa] #24 | EM=YES | F1=1.00 | Contain=YES | running EM=13/24 (54.17%) | running F1=0.59
+  Q: Who won the award for the Best Actor at the 2015 BAFTA film awards
+  GT: eddie redmayne; edward redmayne
+  Pred: Eddie Redmayne
+[triviaqa] #25 | EM=NO | F1=0.00 | Contain=YES | running EM=13/25 (52.00%) | running F1=0.57
+  Q: Who has won the most Oscars
+  GT: 1900s walt timeline; walt disney school; walt disney s life; walt elias disney; walter e disney; walt disney hibernation urban legend; walt disney; waltdisne...
+  Pred: Katharine Hepburn
+[triviaqa] #26 | EM=YES | F1=1.00 | Contain=YES | running EM=14/26 (53.85%) | running F1=0.58
+  Q: What was singer Jack Jones father Allan's theme song
+  GT: donkey serenade
+  Pred: Donkey Serenade
+[triviaqa] #27 | EM=YES | F1=1.00 | Contain=YES | running EM=15/27 (55.56%) | running F1=0.60
+  Q: Who wrote the epic 1869 novel War and Peace
+  GT: count lev nikolaevich tolstoi; lev nikolajevic tolstoj; buried alive play; leo nikolayevich tolstoy; lev nikolaievitch tolstoi; voice of thunder lincoln; lev...
+  Pred: Leo Tolstoy
+[triviaqa] #28 | EM=YES | F1=1.00 | Contain=YES | running EM=16/28 (57.14%) | running F1=0.61
+  Q: In photography, what sort of lens enables a speedy transition from long shots to close-ups
+  GT: zoom lens; zoom lenses; optical zoom
+  Pred: Zoom lens
+[triviaqa] #29 | EM=YES | F1=1.00 | Contain=YES | running EM=17/29 (58.62%) | running F1=0.63
+  Q: What was the first top ten entry for Ce Ce Peniston (1992)
+  GT: we got love thang cece peniston song; we got love thang
+  Pred: We Got A Love Thang
+[triviaqa] #30 | EM=YES | F1=1.00 | Contain=YES | running EM=18/30 (60.00%) | running F1=0.64
+  Q: What was the Troggs most famous hit?
+  GT: wild thing song; wild thing; wild thing disambiguation
+  Pred: Wild Thing
+[triviaqa] #31 | EM=YES | F1=1.00 | Contain=YES | running EM=19/31 (61.29%) | running F1=0.65
+  Q: Where is the largest volcano known to man
+  GT: fourth planet; mars; oblate mars; mars surface features; 4th planet; marte planet; 2003 opposition of mars; mars opposition; hydrology of mars; planet mars; ...
+  Pred: Mars
+[triviaqa] #32 | EM=YES | F1=1.00 | Contain=YES | running EM=20/32 (62.50%) | running F1=0.66
+  Q: What is the underwater equivalent of radar
+  GT: asdic; sonar projector; asdivite; so n r; sonar; anti submarine detection and identification commission; sonar system; low frequency active sonar; sonars; ul...
+  Pred: Sonar
+[triviaqa] #33 | EM=YES | F1=1.00 | Contain=YES | running EM=21/33 (63.64%) | running F1=0.67
+  Q: The German film 'The Blue Angel' launched the career of which famous actress?
+  GT: marie magdalene dietrich; marie dietrich; marlene dietrick; marlène dietrich; marlena dietrich; marlene dietrich; marie m dietrich
+  Pred: Marlene Dietrich
+[triviaqa] #34 | EM=YES | F1=1.00 | Contain=YES | running EM=22/34 (64.71%) | running F1=0.68
+  Q: In cockney rhyming slang what is a dog and bone
+  GT: telephone bell; fixed telephony; fone; telephone set; phone; 📞; ✆; telephones; station set; ℡; phones; telephone receiver; telephone; telephone and telephone...
+  Pred: phone
+[triviaqa] #35 | EM=NO | F1=0.00 | Contain=NO | running EM=22/35 (62.86%) | running F1=0.66
+  Q: What was bandleader Joe Loss's signature tune
+  GT: in mood; in mood song
+  Pred: No Match
+[triviaqa] #36 | EM=YES | F1=1.00 | Contain=YES | running EM=23/36 (63.89%) | running F1=0.67
+  Q: Who duetted with Aretha Franklin on Sisters Are Doing It For Themselves
+  GT: annie lennox; ann lennox; annie lenox
+  Pred: Annie Lennox
+[triviaqa] #37 | EM=YES | F1=1.00 | Contain=YES | running EM=24/37 (64.86%) | running F1=0.68
+  Q: Who played the title role in the TV western series Bronco
+  GT: orison whipple hungerford; ty hardin; orison whipple hungerford jr; orison hungerford jr
+  Pred: Ty Hardin
+[triviaqa] #38 | EM=YES | F1=1.00 | Contain=YES | running EM=25/38 (65.79%) | running F1=0.69
+  Q: 'Yellow River' was a May 1970 No.1 for who?
+  GT: christie disambiguation; christie
+  Pred: Christie
+[triviaqa] #39 | EM=YES | F1=1.00 | Contain=YES | running EM=26/39 (66.67%) | running F1=0.70
+  Q: Which public holiday became official in the UK in 1978
+  GT: may day; 1st of may; 2002 mayday; forsta maj; foersta maj; första maj; 1999 mayday; national day of labour; may day parade
+  Pred: May Day
+[triviaqa] #40 | EM=NO | F1=0.00 | Contain=YES | running EM=26/40 (65.00%) | running F1=0.68
+  Q: Which cardinal point does not appear in the names of the American states
+  GT: 東; 东; eest; east; eastward
+  Pred: Ohio
+[triviaqa] #41 | EM=NO | F1=0.00 | Contain=NO | running EM=26/41 (63.41%) | running F1=0.66
+  Q: Which European capital city lies on the River Sava
+  GT: zahreb; zg hr; zagreb city croatia; zagrib; zagrab; זגרב; hrvatska zagreb; zagrebe; zagreb na savi; zagreb republic of croatia; croatian metropolis; grad zag...
+  Pred: Belgrade
+[triviaqa] #42 | EM=YES | F1=1.00 | Contain=YES | running EM=27/42 (64.29%) | running F1=0.67
+  Q: Who was the British Prime Minister in 1953?
+  GT: winston churchill; winston churchil; sir churchill; winnie churchill; honourable sir winston spencer churchill; winston leonard spencer; sir winston churchil...
+  Pred: Winston Churchill
+[triviaqa] #43 | EM=YES | F1=1.00 | Contain=YES | running EM=28/43 (65.12%) | running F1=0.68
+  Q: Which disease is also called lockjaw?
+  GT: tetanus immune globulin; tetanus immunoglobulin; tetanis; tetanus; neo natal tetanus; tetnus; tetanus antitoxin; atc code j06aa02; tetanus disease; obstetric...
+  Pred: Tetanus
+[triviaqa] #44 | EM=NO | F1=0.00 | Contain=YES | running EM=28/44 (63.64%) | running F1=0.66
+  Q: Who was Cassius Clay's manager
+  GT: dundee art; city of dundee; dùn deagh; murroes primary school; dundee central library; dùn dè; dundee port; dùn dèagh; dun deagh; city of discovery; city of ...
+  Pred: Bill Faversham
+[triviaqa] #45 | EM=YES | F1=1.00 | Contain=YES | running EM=29/45 (64.44%) | running F1=0.67
+  Q: What is the capital of the Navarre region of northern Spain
+  GT: un locode espna; pamplona iruña; pampelune; pamplona iruna; irunea; pamplona; pamplona spain; pamplona iruña navarre; pamplona iruna navarre; pampeluna; iruñ...
+  Pred: Pamplona
+[triviaqa] #46 | EM=NO | F1=0.50 | Contain=YES | running EM=29/46 (63.04%) | running F1=0.67
+  Q: In music, an axe is a slang term for which instrument
+  GT: strap lock system; archguitar; gatar; guitar lesson; gitfiddle; 🎸; guitar lessons; guitar music; guiatar; guitar history; 6 string guitar; six string guitar;...
+  Pred: saxophone and guitar
+[triviaqa] #47 | EM=YES | F1=1.00 | Contain=YES | running EM=30/47 (63.83%) | running F1=0.67
+  Q: What is the most exclusive hotel in Brook Street London
+  GT: claridges; mivart s hotel; claridges hotel; claridge s; claridge s hotel
+  Pred: Claridge's
+[triviaqa] #48 | EM=NO | F1=0.15 | Contain=YES | running EM=30/48 (62.50%) | running F1=0.66
+  Q: What did Delia Smith train as before becoming a chef
+  GT: hairstylist; hairdresser; hairdressers; hairdressing; hairdressing salon; hair dresser; hairstylists; hair stylist; hair stylists
+  Pred: No Match
+[triviaqa] #49 | EM=YES | F1=1.00 | Contain=YES | running EM=31/49 (63.27%) | running F1=0.67
+  Q: In which famous London shop in Piccadilly is there an animated clock on the front, where the original owners turn on the hour to bow to each other
+  GT: fortnum s; william fortnum; fortnum and mason; plc fortnum mason; fortnums; fortnum mason
+  Pred: Fortnum and Mason
+[triviaqa] #50 | EM=NO | F1=0.00 | Contain=YES | running EM=31/50 (62.00%) | running F1=0.66
+  Q: Which American state has the most airports
+  GT: texas; religion in texas; texos; christianity in texas; texass; texas u s state; us tx; lake ozark texas; twenty eighth state; state of texas; lone star stat...
+  Pred: California
+[triviaqa] #51 | EM=NO | F1=0.09 | Contain=NO | running EM=31/51 (60.78%) | running F1=0.65
+  Q: Who were the first League Cup winners
+  GT: aston villa fc; avfc; aston villa football club; aston villa; aston villa f c; villa football club; aston vil; aston villa hall of fame; villa news and record
+  Pred: No Match
+[triviaqa] #52 | EM=YES | F1=1.00 | Contain=YES | running EM=32/52 (61.54%) | running F1=0.65
+  Q: Ford Prefect came from a star in which constellation?
+  GT: orion music; orion class spaceship; orions disambiguation; orion system; orion; orions; orion song; orion disambiguation
+  Pred: Orion
+[triviaqa] #53 | EM=NO | F1=0.02 | Contain=YES | running EM=32/53 (60.38%) | running F1=0.64
+  Q: "Who has the motto ""Nation shall speak peace unto nation"""
+  GT: bbc uk; british broadcasting cooperation; british broadcasting corportation; british broadcasting co; british broadcasting corp; bbc charter review; british ...
+  Pred: No Match
+[triviaqa] #54 | EM=YES | F1=1.00 | Contain=YES | running EM=33/54 (61.11%) | running F1=0.65
+  Q: What year was the final Harry Potter book, Harry Potter and the Deathly Hallows, released?
+  GT: 2007; two thousand and seven
+  Pred: 2007
+[triviaqa] #55 | EM=NO | F1=0.67 | Contain=YES | running EM=33/55 (60.00%) | running F1=0.65
+  Q: Vijay Singh, a US Masters champion, comes from where?
+  GT: fidji; feejee; etymology of fiji; fijis; tourism in fiji; fidji islands; chikoba; pacific fiji; fiji islander; republic of fiji islands; cannibal isles; mata...
+  Pred: Fijian
+[triviaqa] #56 | EM=YES | F1=1.00 | Contain=YES | running EM=34/56 (60.71%) | running F1=0.65
+  Q: In the magic roundabout what kind of creature was Brian ?
+  GT: ochu; 🐌; wallfish; marine snail; snails; snail; snale; jono hawkins
+  Pred: snail
+[triviaqa] #57 | EM=YES | F1=1.00 | Contain=YES | running EM=35/57 (61.40%) | running F1=0.66
+  Q: In which town is the University of Surrey
+  GT: bellfield s; bellfields; holy trinity school guildford; guildford city; stoke next guildford; stoughton surrey; sandfield primary school; dennisville; holy t...
+  Pred: Guildford
+[triviaqa] #58 | EM=YES | F1=1.00 | Contain=YES | running EM=36/58 (62.07%) | running F1=0.67
+  Q: Which colour scores the most on an archery target
+  GT: gold poisoning; aurric; gold metal; flour gold; gold making; e175 e number; monatomic gold; gold; australium; au element; gold compounds; element 79; gold el...
+  Pred: gold
+[triviaqa] #59 | EM=YES | F1=1.00 | Contain=YES | running EM=37/59 (62.71%) | running F1=0.67
+  Q: From 'On Her Majesty's Secret Service' (1969), as Bond passes a janitor in Draco's headquarters, the man can be heard whistling what?
+  GT: goldfinger 1964 theme
+  Pred: The Goldfinger (1964) theme
+[triviaqa] #60 | EM=YES | F1=1.00 | Contain=YES | running EM=38/60 (63.33%) | running F1=0.68
+  Q: Born 'Lucille LeSueur' , By what name is this actress better known?
+  GT: lucille lesueur; joan crawford; crawford joan; lucille fay lesueur
+  Pred: Joan Crawford
+[triviaqa] #61 | EM=NO | F1=0.09 | Contain=NO | running EM=38/61 (62.30%) | running F1=0.67
+  Q: On what day is Michaelmas celebrated?
+  GT: michaelmas day is feast of saint michael archangel celebrated on 29 september st michael is patron saint of sea and maritime lands of ships and boatmen of ho...
+  Pred: 29 September
+[triviaqa] #62 | EM=YES | F1=1.00 | Contain=YES | running EM=39/62 (62.90%) | running F1=0.67
+  Q: What letter is to the right of Q on a typewriter?
+  GT: 🅆; double u; w letter; 🅦; 🄦; double v; 🆆; double ues; ⒲; double you; ⓦ; ｗ; w
+  Pred: W
+[triviaqa] #63 | EM=YES | F1=1.00 | Contain=YES | running EM=40/63 (63.49%) | running F1=0.68
+  Q: 'Encephalitis' affects which part of the body?
+  GT: brain marrow; vertebrate brain; visual verbal ability; brain cell; mind myths; brainy; mammalian brain; brain; brain functions; encephalon; brain function; b...
+  Pred: brain
+[triviaqa] #64 | EM=YES | F1=1.00 | Contain=YES | running EM=41/64 (64.06%) | running F1=0.68
+  Q: What was Johnny Cash's home state
+  GT: sports in arkansas; natural state; state of arkansas; twenty fifth state; 25th state; arkansas; climate of arkansas; arkansan; arkies; arkansawyer; arkansaws...
+  Pred: Arkansas
+[triviaqa] #65 | EM=NO | F1=0.00 | Contain=YES | running EM=41/65 (63.08%) | running F1=0.67
+  Q: Pancetta is a type of what?
+  GT: hickory bacon; side bacon; back rashers; cottage bacon; streaky rashers; bacon rind; gammon of bacon; rashers; bacon; bacon fat; bacos; streaky rasher; strea...
+  Pred: cured pork belly
+[triviaqa] #66 | EM=NO | F1=0.00 | Contain=NO | running EM=41/66 (62.12%) | running F1=0.66
+  Q: What is the world’s most popular non alcoholic drink?
+  GT: coffee; c o f f e e; coffee cinema 4d
+  Pred: tea
+[triviaqa] #67 | EM=YES | F1=1.00 | Contain=YES | running EM=42/67 (62.69%) | running F1=0.67
+  Q: Whose autobiography was titled 1966 And All That
+  GT: sir geoff hurst m b e; sir geoffrey charles hurst mbe; geoff hurst; sir geoffrey charles hurst; geoffrey charles hurst mbe; sir geoff hurst; geoffrey hurst
+  Pred: Geoff Hurst
+[triviaqa] #68 | EM=YES | F1=1.00 | Contain=YES | running EM=43/68 (63.24%) | running F1=0.67
+  Q: On which river is Kings Lynn
+  GT: bedfordshire ouse; great ouse; river great ouse
+  Pred: River Great Ouse
+[triviaqa] #69 | EM=YES | F1=1.00 | Contain=YES | running EM=44/69 (63.77%) | running F1=0.68
+  Q: Which ocean would you cross if you travelled from Brisbane to Los Angeles
+  GT: eastern pacific ocean; oceanum pacificum; north pacific; pacific basin; mid pacific; west pacific; eastern pacific; southern pacific ocean; tepre pacificum; ...
+  Pred: Pacific Ocean
+[triviaqa] #70 | EM=NO | F1=0.67 | Contain=YES | running EM=44/70 (62.86%) | running F1=0.68
+  Q: Where did comic book character 'Desperate Dan' live?
+  GT: cactusville; desperate dan
+  Pred: Cactusville, Texas
+[triviaqa] #71 | EM=YES | F1=1.00 | Contain=YES | running EM=45/71 (63.38%) | running F1=0.68
+  Q: What was the name of the character played by Chuck Connors in The Rifleman
+  GT: lucas mccain
+  Pred: Lucas McCain
+[triviaqa] #72 | EM=NO | F1=0.00 | Contain=YES | running EM=45/72 (62.50%) | running F1=0.67
+  Q: On the Beaufort scale what is defined as force 11?
+  GT: storm album; storm character; storm fictional character; storm disambiguation; storm band; storm song; storm; storms album; storm film; storm single
+  Pred: The description of force 11 is not explicitly mentioned, but it is inferred to be the highest force on the Beaufort scale.
+[triviaqa] #73 | EM=YES | F1=1.00 | Contain=YES | running EM=46/73 (63.01%) | running F1=0.68
+  Q: El Prat Airport serves which European city
+  GT: city of barcelona; barcelona barcelona; barcelone; barcelona spain; catania italy; barcelona city; barcellona; weather in barcelona; barcelona; barcelona cat...
+  Pred: Barcelona
+[triviaqa] #74 | EM=YES | F1=1.00 | Contain=YES | running EM=47/74 (63.51%) | running F1=0.68
+  Q: Who was the French wife of Charles1st?
+  GT: henrietta maria de bourbon; charles james stuart duke of cornwall; queen henrietta maria of england; henriette marie de france; henrietta maria; queen henrie...
+  Pred: Henrietta Maria of France
+[triviaqa] #75 | EM=NO | F1=0.00 | Contain=NO | running EM=47/75 (62.67%) | running F1=0.67
+  Q: The majority of the land area of Africa lies in which hemisphere?
+  GT: northern disambiguation; northern
+  Pred: Southern Hemisphere
+[triviaqa] #76 | EM=YES | F1=1.00 | Contain=YES | running EM=48/76 (63.16%) | running F1=0.68
+  Q: Which Dickens novel takes place during the French revolution
+  GT: vengeance; tale of two cities; vengeance tale of two cities; mender of roads; it was best of times it was worst of times; mrs cruncher; it is far far better ...
+  Pred: A Tale of Two Cities
+[triviaqa] #77 | EM=YES | F1=1.00 | Contain=YES | running EM=49/77 (63.64%) | running F1=0.68
+  Q: The eldest son of a French King was always given which title?
+  GT: dauphin; dauphins; dauphin heir apparent; dauphin disambiguation; dauphian; dauphain; dauphin electoral district
+  Pred: Dauphin
+[triviaqa] #78 | EM=NO | F1=0.80 | Contain=YES | running EM=49/78 (62.82%) | running F1=0.68
+  Q: Gerald Thomas directed what series of films?
+  GT: carry on film; carry on again nurse; carry on film series; carry on franchise; carry on series; carry on spaceman; carry on films
+  Pred: Carry On
+[triviaqa] #79 | EM=NO | F1=0.01 | Contain=YES | running EM=49/79 (62.03%) | running F1=0.67
+  Q: Which female American actress, and singer had a hit in 1991 with From a Distance
+  GT: bette midler filmography and television work; bette midler; midler bette; bette middler; clams on half shell revue
+  Pred: No Match
+[triviaqa] #80 | EM=YES | F1=1.00 | Contain=YES | running EM=50/80 (62.50%) | running F1=0.68
+  Q: In the Inspector Morse series what is the christian name of Sergeant Lewis' wife
+  GT: valerie; valerie disambiguation; valerie song
+  Pred: Valerie
+[triviaqa] #81 | EM=NO | F1=0.57 | Contain=NO | running EM=50/81 (61.73%) | running F1=0.68
+  Q: English royalty who mourned her husband's death for 40 years?
+  GT: queen victoria and prince albert
+  Pred: Queen Victoria
+[triviaqa] #82 | EM=YES | F1=1.00 | Contain=YES | running EM=51/82 (62.20%) | running F1=0.68
+  Q: What is vellum parchment made from
+  GT: calfskin; calf skin; chickenskin; veau velours
+  Pred: calf skin
+[triviaqa] #83 | EM=NO | F1=0.00 | Contain=YES | running EM=51/83 (61.45%) | running F1=0.67
+  Q: If a female rabbit is a 'Doe' what is a female ferret?
+  GT: jill
+  Pred: No Match
+[triviaqa] #84 | EM=YES | F1=1.00 | Contain=YES | running EM=52/84 (61.90%) | running F1=0.68
+  Q: From which country does the food brand Del Monte originate
+  GT: u s of america; u–s–; estatos unitos; amarica; america united states of; v s amerika; states of america; amurika; unitesd states; estados unidos de america; ...
+  Pred: United States
+[triviaqa] #85 | EM=YES | F1=1.00 | Contain=YES | running EM=53/85 (62.35%) | running F1=0.68
+  Q: Moon River is an Oscar winning song from which movie?
+  GT: breakfast at tiffany; breakfast at tiffanys; breakfast at tiffanies; breakfast at tiffany s disambiguation; breakfast at tiffany s
+  Pred: Breakfast at Tiffany's
+[triviaqa] #86 | EM=YES | F1=1.00 | Contain=YES | running EM=54/86 (62.79%) | running F1=0.68
+  Q: "Heinz' 1963 song ""Just Like Eddie"" was a tribute to whom?"
+  GT: pretty girl eddie cochran song; eddie cochran; cochran eddie; one kiss eddie cochran song; skinny jim; eddie cochrane
+  Pred: Eddie Cochran
+[triviaqa] #87 | EM=NO | F1=0.50 | Contain=YES | running EM=54/87 (62.07%) | running F1=0.68
+  Q: What character was played by Bill Fraser in 'The Army Game'?
+  GT: snudge
+  Pred: Sergeant Claude Snudge
+[triviaqa] #88 | EM=NO | F1=0.00 | Contain=NO | running EM=54/88 (61.36%) | running F1=0.67
+  Q: I what year was the first 'Mechanical Hare' used in greyhound racing?
+  GT: one thousand nine hundred and nineteen; 1919
+  Pred: 1912
+[triviaqa] #89 | EM=YES | F1=1.00 | Contain=YES | running EM=55/89 (61.80%) | running F1=0.68
+  Q: What was the theme music from Bridge on the River Kwai
+  GT: march from river kwai colonel bogey; colonel bogey march; march from river kwai and colonel bogey; colonel bogie; colonel bogey s march; bogey march; colonel...
+  Pred: The Colonel Bogey March
+[triviaqa] #90 | EM=NO | F1=0.80 | Contain=YES | running EM=55/90 (61.11%) | running F1=0.68
+  Q: Which of the Great Train Robbers became a florist outside Waterloo station until he was found hanged in a lock up
+  GT: buster edwards; ronald 22buster 22 edwards
+  Pred: Ronald "Buster" Edwards
+[triviaqa] #91 | EM=YES | F1=1.00 | Contain=YES | running EM=56/91 (61.54%) | running F1=0.68
+  Q: In Greek legend, who turned everything he touched into gold ?
+  GT: midas gardens; berecynthain hero; midas and golden touch; midas curse; touch of midas; king midas; midas touch; midas
+  Pred: King Midas
+[triviaqa] #92 | EM=YES | F1=1.00 | Contain=YES | running EM=57/92 (61.96%) | running F1=0.69
+  Q: Which British city has the most canals ?
+  GT: birmingham england; birminghamian; birmingham artistic figures; birmingham; birmingham uk; weather in birmingham; birmingham united kingdom; county borough o...
+  Pred: Birmingham
+[triviaqa] #93 | EM=YES | F1=1.00 | Contain=YES | running EM=58/93 (62.37%) | running F1=0.69
+  Q: What was Moses elder brother called
+  GT: hārūn; áron; هارون; letteratopics aaron; aaron; aaron in islam; aalar; islamic view of aaron; ahărōn; bible aaron; ahron; אַהֲרֹן; haaroon
+  Pred: Aaron
+[triviaqa] #94 | EM=YES | F1=1.00 | Contain=YES | running EM=59/94 (62.77%) | running F1=0.69
+  Q: Being developed from earlier keyboard instruments, what year was the piano invented?
+  GT: 1709; one thousand seven hundred and nine
+  Pred: 1709
+[triviaqa] #95 | EM=YES | F1=1.00 | Contain=YES | running EM=60/95 (63.16%) | running F1=0.70
+  Q: The singer 'Sting' featured on a track of which 1985 Dire Straits album?
+  GT: brothers in arms; brothers in arms disambiguation; brother in arms; brothers in arm; brothers in arms album; brothers in arms film; brothers in arms novel
+  Pred: Brothers in Arms
+[triviaqa] #96 | EM=NO | F1=0.00 | Contain=NO | running EM=60/96 (62.50%) | running F1=0.69
+  Q: Which bird uses a stone for breaking the shells of snails
+  GT: thrush disambiguation; thrush zoology; thrush
+  Pred: Great Antshrike (Taraba major)
+[triviaqa] #97 | EM=YES | F1=1.00 | Contain=YES | running EM=61/97 (62.89%) | running F1=0.69
+  Q: In which sport would you see someone slam-dunking the ball?
+  GT: men s basketball; baksetball; baketball; boy s basketball; basketball club; high school basketball; rim basketball; basketball team; bball; unicycle basketba...
+  Pred: basketball
+[triviaqa] #98 | EM=YES | F1=1.00 | Contain=YES | running EM=62/98 (63.27%) | running F1=0.69
+  Q: Which car company advertises with the slogan The best or nothing
+  GT: m b; mercedes group; mercedes benz; bluehybrid; mercedes benz mlc class; mercedez benz; mercedes benz clt class; teleaid; mercedes benz corporation; mercedes...
+  Pred: Mercedes-Benz
+[triviaqa] #99 | EM=YES | F1=1.00 | Contain=YES | running EM=63/99 (63.64%) | running F1=0.70
+  Q: Which American gang of outlaws from the old west had the christian names Robert, Grattan and Emett
+  GT: dalton brothers; bill power outlaw; dalton gang
+  Pred: Dalton Gang
+[triviaqa] #100 | EM=YES | F1=1.00 | Contain=YES | running EM=64/100 (64.00%) | running F1=0.70
+  Q: In what year did Torville and Dean (Jane and Christopher) win their first Olympic gold, scoring 12 perfect sixes in their free-dance routine?
+  GT: 1984; one thousand nine hundred and eighty four
+  Pred: 1984
+[triviaqa] #101 | EM=NO | F1=0.80 | Contain=YES | running EM=64/101 (63.37%) | running F1=0.70
+  Q: Which black and white marine creature is the largest member of the Dolphin family?
+  GT: orca cetacean; transient killerwhale; killer whales; orca gladiator; orca whale; killer whales in native culture; orcinus; orcinus orca; killer whale; whale ...
+  Pred: Orcas (Orcinus orca)
+[triviaqa] #102 | EM=YES | F1=1.00 | Contain=YES | running EM=65/102 (63.73%) | running F1=0.70
+  Q: What type of animal is a nyala
+  GT: antilopina; antelopes; antelope; hybrid antelope; botswanan antelopes
+  Pred: antelope
+[triviaqa] #103 | EM=NO | F1=0.50 | Contain=YES | running EM=65/103 (63.11%) | running F1=0.70
+  Q: What is the collective noun for Buzzards
+  GT: kelvin wake pattern; wake flow; boat wakes; wake
+  Pred: wake of buzzards
+[triviaqa] #104 | EM=NO | F1=0.29 | Contain=YES | running EM=65/104 (62.50%) | running F1=0.70
+  Q: Christopher Cockerill invented what in 1955?
+  GT: hover barge; hovercrafts; ground effect machine; hovercraft; air cushion vehicles; ground effect machines; hoverbarge; air cushion machine; air cushion vehicle
+  Pred: The experiment that tested the theory behind the Hovercraft
+[triviaqa] #105 | EM=NO | F1=0.00 | Contain=NO | running EM=65/105 (61.90%) | running F1=0.69
+  Q: Where are the headquarters of the Australia Rugby Football Union
+  GT: tuiccanham; orleans primary school; twickenham london england; orleans infants; chase bridge primary school; chase bridge; twickenham; orleans infants school...
+  Pred: Unknown
+[triviaqa] #106 | EM=YES | F1=1.00 | Contain=YES | running EM=66/106 (62.26%) | running F1=0.69
+  Q: What Christian holiday is celebrated immediately after Halloween
+  GT: all saints sunday; feast of all saints; all saints; solemnity of all saints; tutti i santi; hallowmas; all hallows day; all saint s day; all saints day
+  Pred: All Saints' Day
+[triviaqa] #107 | EM=NO | F1=0.67 | Contain=YES | running EM=66/107 (61.68%) | running F1=0.69
+  Q: From which language do we get the word yacht
+  GT: dutc; dutch; dutch disambiguation; dtuch
+  Pred: early Dutch
+[triviaqa] #108 | EM=YES | F1=1.00 | Contain=YES | running EM=67/108 (62.04%) | running F1=0.70
+  Q: Who originally looked after the Blue Peter garden
+  GT: percy thrower
+  Pred: Percy Thrower
+[triviaqa] #109 | EM=YES | F1=1.00 | Contain=YES | running EM=68/109 (62.39%) | running F1=0.70
+  Q: Where was the Titanic heading for on her maiden voyage
+  GT: us ny; n y; neo york; 11th state; new york state s; nýja jórvík; new yourk; new york us; new york; estado nueva york; nova york; ny state; state new york; ne...
+  Pred: New York
+[triviaqa] #110 | EM=NO | F1=0.86 | Contain=NO | running EM=68/110 (61.82%) | running F1=0.70
+  Q: Whose horse was Black Nell?
+  GT: wild bill hickok s
+  Pred: Wild Bill Hickok
+[triviaqa] #111 | EM=YES | F1=1.00 | Contain=YES | running EM=69/111 (62.16%) | running F1=0.70
+  Q: In which American state is Yale University
+  GT: government of connecticut; conn; education in connecticut; richest places in connecticut; connectecuit; connetecuit; geography of connecticut; connecticuit; ...
+  Pred: Connecticut
+[triviaqa] #112 | EM=YES | F1=1.00 | Contain=YES | running EM=70/112 (62.50%) | running F1=0.71
+  Q: On which day is Halloween celebrated?
+  GT: 31st october; 31 october; november 0; october 31st; oct 31; october 31
+  Pred: October 31st
+[triviaqa] #113 | EM=NO | F1=0.00 | Contain=NO | running EM=70/113 (61.95%) | running F1=0.70
+  Q: You have probably all heard of the CD record but what number is CD in Roman numerals
+  GT: four hundred; 400
+  Pred: 600
+[triviaqa] #114 | EM=YES | F1=1.00 | Contain=YES | running EM=71/114 (62.28%) | running F1=0.70
+  Q: Who played 'Chief Inspector Dreyfus' in the 'Pink Panther' films?
+  GT: herbert schluderpacheru; herbert charles angelo kuchacevich ze schluderpacheru; herbert lom; herbert charles angelo kuchacevich von schluderpacheru
+  Pred: Herbert Lom
+[triviaqa] #115 | EM=YES | F1=1.00 | Contain=YES | running EM=72/115 (62.61%) | running F1=0.71
+  Q: What was the nationality of composer Frederic Chopin?
+  GT: polishedly; polisher; polishes; polish disambiguation; polishers; polski; polish; polishingly
+  Pred: Polish
+[triviaqa] #116 | EM=YES | F1=1.00 | Contain=YES | running EM=73/116 (62.93%) | running F1=0.71
+  Q: In which country is the southern pillar of Hercules
+  GT: moraco; morrocco; maroc disambiguation; sherifian empire; al mamlaka al maġribiyya; norocco; maroco; name of morocco; kingdom of morocco; maroc; iso 3166 1 m...
+  Pred: Morocco
+[triviaqa] #117 | EM=YES | F1=1.00 | Contain=YES | running EM=74/117 (63.25%) | running F1=0.71
+  Q: Which book of the Old Testament is a collection of moral and ethical maxims?
+  GT: paremiographers; paremiologists; nayword; naywords; paremiologist; proverbial comparison; proverbial interrogative; proverbium; proverbial; proverbially; pro...
+  Pred: Proverbs
+[triviaqa] #118 | EM=NO | F1=0.67 | Contain=YES | running EM=74/118 (62.71%) | running F1=0.71
+  Q: What is animelles the culinary term for
+  GT: testical cyst; testicals; balls slang; testicular diseases; testicular hormones; teste; testicle; testicular disorder; testical; orchitic; testes; testis; te...
+  Pred: bull testicles
+[triviaqa] #119 | EM=NO | F1=0.00 | Contain=NO | running EM=74/119 (62.18%) | running F1=0.70
+  Q: Which is the only sign of the Zodiac to start and finish with the same letter
+  GT: sagittarius disambiguation; sagitarius; saggattarrius; sagittarius dwarf; sagittarius dwarf galaxy; saggatarrius; sagittarius galaxy; saggattarius; saggittar...
+  Pred: Aries
+[triviaqa] #120 | EM=NO | F1=0.50 | Contain=YES | running EM=74/120 (61.67%) | running F1=0.70
+  Q: What was American footballer William Perry's nickname?
+  GT: escape from samsara; fridge; electric brixton
+  Pred: The Refrigerator or The Fridge
+[triviaqa] #121 | EM=YES | F1=1.00 | Contain=YES | running EM=75/121 (61.98%) | running F1=0.71
+  Q: Who wrote, produced and directed epic film, Avatar?
+  GT: list of awards and nominations received by james cameron; james cameron; james francis cameron
+  Pred: James Cameron
+[triviaqa] #122 | EM=YES | F1=1.00 | Contain=YES | running EM=76/122 (62.30%) | running F1=0.71
+  Q: In 1967, who was the first DJ on Radio 1?
+  GT: tony blackburn; lenny gamble
+  Pred: Tony Blackburn
+[triviaqa] #123 | EM=NO | F1=0.03 | Contain=NO | running EM=76/123 (61.79%) | running F1=0.70
+  Q: Which manager bought Trevor Francis thereby turning him into the first million pound footballer
+  GT: cloughie; brian clough s football fortunes; brian clough
+  Pred: No Match
+[triviaqa] #124 | EM=NO | F1=0.00 | Contain=NO | running EM=76/124 (61.29%) | running F1=0.70
+  Q: If you had a seal point and/or a blue point, what breed of cat do you have?
+  GT: siamese; siamese disambiguation
+  Pred: No, seal point is not a breed-only trait. It can occur in non-purebred cats, and the point color can vary depending on the cat's temperature and genetics.
+[triviaqa] #125 | EM=YES | F1=1.00 | Contain=YES | running EM=77/125 (61.60%) | running F1=0.70
+  Q: During which battle did Davey Crockett lose his life?
+  GT: gonzales company of mounted volunteers; battle of alamo; gonzales ranging company; gonzales ranging company of mounted volunteers; gonzales mounted rangers; ...
+  Pred: The Battle of the Alamo
+[triviaqa] #126 | EM=YES | F1=1.00 | Contain=YES | running EM=78/126 (61.90%) | running F1=0.70
+  Q: In which sport did Duncan Goodhew excel?
+  GT: to suijutsu; swam; swimming disambiguation; swimming
+  Pred: swimming
+[triviaqa] #127 | EM=YES | F1=1.00 | Contain=YES | running EM=79/127 (62.20%) | running F1=0.70
+  Q: Who took over the leadership of Russia when Boris Yeltsin resigned
+  GT: vladimer putin; president putin; владимир путин; vladimir vladimirovich putin; vlad putin; political strongman of russia; puttin; valdimir v putin; vladimir ...
+  Pred: Vladimir Putin
+[triviaqa] #128 | EM=YES | F1=1.00 | Contain=YES | running EM=80/128 (62.50%) | running F1=0.71
+  Q: Who is currently the Supreme Governor of the Church of England?
+  GT: elizabeth ii of gambia; elizabeth ii of mauritius; elizabeth mountbatten windsor; her majesty queen elizabeth ii; queen elizabeth ii of new zealand; elizabet...
+  Pred: Queen Elizabeth II
+[triviaqa] #129 | EM=NO | F1=0.00 | Contain=NO | running EM=80/129 (62.02%) | running F1=0.70
+  Q: What type of food in the United States are Brown Bobbies
+  GT: doughnuts; hanson gregory; yeast doughnut; 🍩; siyakoy; do nut; glazed doughnuts; dougnut; shakoy; doenut; sprinkle doughnut; doughnut; siakoy; donuts; donut;...
+  Pred: Unknown
+[triviaqa] #130 | EM=NO | F1=0.40 | Contain=NO | running EM=80/130 (61.54%) | running F1=0.70
+  Q: In the nursery rhyme Cock a Doodle Doo what has my master lost
+  GT: his fiddling stick
+  Pred: fiddle stick
+[triviaqa] #131 | EM=NO | F1=0.57 | Contain=YES | running EM=80/131 (61.07%) | running F1=0.70
+  Q: At which British golf course could you find yourself in Hell Bunker
+  GT: saint andrews united kingdom; saunt aundraes; s andreas; kilrymont; history of st andrews; royal burgh of st andrews; cill rìmhinn; standrews; st andrews bur...
+  Pred: The Old Course in St. Andrews
+[triviaqa] #132 | EM=YES | F1=1.00 | Contain=YES | running EM=81/132 (61.36%) | running F1=0.70
+  Q: What is the national anthem of the USA called?
+  GT: u s national anthem; america s national anthem; national anthem of usa; star spangled; tssb; in defense of fort mchenry; oh say can you see; defence of fort ...
+  Pred: The Star-Spangled Banner
+[triviaqa] #133 | EM=YES | F1=1.00 | Contain=YES | running EM=82/133 (61.65%) | running F1=0.70
+  Q: Who killed Goliath with a sling and a stone?
+  GT: داود; son of jesse; david hamelekh; david bible; davud; david vs goliath; davidovna; דָּוִד; daveed; king david; david; דָּוִיד; davyd; historicity of david;...
+  Pred: David
+[triviaqa] #134 | EM=YES | F1=1.00 | Contain=YES | running EM=83/134 (61.94%) | running F1=0.70
+  Q: Who designed the Queen's wedding dress?
+  GT: sir norman hartnell; norman bishop hartnell; sir norman bishop hartnell; norman hartnell
+  Pred: Norman Hartnell
+[triviaqa] #135 | EM=YES | F1=1.00 | Contain=YES | running EM=84/135 (62.22%) | running F1=0.71
+  Q: What aid to baking was invented by Henry Jones of Bristol in 1845
+  GT: meolo botany; refined white flour; self rising flour; bean flour; bleached flour; farinaceous; refined flour; strong flour; plain flour; all purpose flour; m...
+  Pred: self-raising flour
+[triviaqa] #136 | EM=YES | F1=1.00 | Contain=YES | running EM=85/136 (62.50%) | running F1=0.71
+  Q: Name the Greek Mythological hero who killed the gorgon Medusa?
+  GT: acrisioniades; perseus and pegasus; perseus greek mythology; περσεύς; perseus; περσέας; percius; persus; perseos; perseas; mythology perseus; περσέως; perseu...
+  Pred: Perseus
+[triviaqa] #137 | EM=NO | F1=0.36 | Contain=YES | running EM=85/137 (62.04%) | running F1=0.71
+  Q: What was made and repaired by a Wainwright?
+  GT: wagon; front axle assembly; wagon vehicle; horse drawn wagon; waggon; farm wagon; delivery wagon; wagons; circus wagon
+  Pred: Wheels for carts, wagons, and horse-drawn carriages
+[triviaqa] #138 | EM=YES | F1=1.00 | Contain=YES | running EM=86/138 (62.32%) | running F1=0.71
+  Q: What was the name of the island where Nelson Mandela was imprisoned for 18 years?
+  GT: robben eiland; robben island; robben island prison; robbin island; robbeneiland; robben s island; robin island; robben island museum
+  Pred: Robben Island
+[triviaqa] #139 | EM=NO | F1=0.00 | Contain=YES | running EM=86/139 (61.87%) | running F1=0.70
+  Q: The country name for which bird is the 'rud' or ruddock
+  GT: robin; robin disambiguation; robin bird
+  Pred: England
+[triviaqa] #140 | EM=NO | F1=0.00 | Contain=NO | running EM=86/140 (61.43%) | running F1=0.70
+  Q: In America what name was given to the granite boulder onto which the Plymouth fathers (allegedly) stepped ashore
+  GT: plymouth rock ma; plymith rock; plymouth rock; barred plymoth rock; plymeth rock; plymoth rock
+  Pred: The Pilgrim Stone
+[triviaqa] #141 | EM=YES | F1=1.00 | Contain=YES | running EM=87/141 (61.70%) | running F1=0.70
+  Q: Who won the Formula 1 World Championship in 1992?
+  GT: nigel mansel; nigel mansell; nigel ernest james mansell; our nige; mansell nigel ernest james
+  Pred: Nigel Mansell
+[triviaqa] #142 | EM=YES | F1=1.00 | Contain=YES | running EM=88/142 (61.97%) | running F1=0.70
+  Q: January 3, 1924 saw Howard Carter discover what famous Egyptian pharaoh?
+  GT: tutanhamon; tutenkhamen; tutenkamen; living image of aten; king tut s death; tuthankamen; tutankamon; nebkheperure tutankhamun; tutankamun; tut anj amon; kin...
+  Pred: Tutankhamen
+[triviaqa] #143 | EM=YES | F1=1.00 | Contain=YES | running EM=89/143 (62.24%) | running F1=0.70
+  Q: Who is Vincent Furnier better know as?
+  GT: alice coper; humanary stew tribute to alice cooper; vincent damon furnier; alice cooper; calico cooper; vincent d furnier; mascarra monsters best of alice co...
+  Pred: Alice Cooper
+[triviaqa] #144 | EM=NO | F1=0.00 | Contain=YES | running EM=89/144 (61.81%) | running F1=0.70
+  Q: What is the Latin for wolf spider?
+  GT: www lycos com; mailcity com; mailcity; lycos 50; lycos retriever; lycos mail; lycos inc; lycos de; lycos; lycos com
+  Pred: Lyosidae, Genus Lycosa
+[triviaqa] #145 | EM=YES | F1=1.00 | Contain=YES | running EM=90/145 (62.07%) | running F1=0.70
+  Q: In which Falklands engagement did Colonel H Jones win his VC
+  GT: goose green settlement; goose green falkland islands; goose green
+  Pred: Goose Green
+[triviaqa] #146 | EM=YES | F1=1.00 | Contain=YES | running EM=91/146 (62.33%) | running F1=0.70
+  Q: The Guinness Book of Records was first published in what year?
+  GT: 1955; one thousand nine hundred and fifty five
+  Pred: 1955
+[triviaqa] #147 | EM=YES | F1=1.00 | Contain=YES | running EM=92/147 (62.59%) | running F1=0.71
+  Q: Of which country was Cleopatra the Queen
+  GT: names of egypt; jumhuriyat misr al arabiyah; eytp; iso 3166 1 eg; egypt; r egypt; eygpt; kimet; name of egypt; جمهورية مصرالعربية; arab republic of egypt; eg...
+  Pred: Egypt
+[triviaqa] #148 | EM=YES | F1=1.00 | Contain=YES | running EM=93/148 (62.84%) | running F1=0.71
+  Q: In what country is 'Mt. Everest'?
+  GT: nēpāl adhirājya; sanghiya loktāntrik ganatantra nepāl; chiuri kharka; state of nepal; peace zone; संघीय लोकतान्त्रिक गणतन्त्र नेपाल; fdrn; nepol; नेपाः; demo...
+  Pred: Nepal
+[triviaqa] #149 | EM=NO | F1=0.67 | Contain=YES | running EM=93/149 (62.42%) | running F1=0.71
+  Q: Which of the Kray brothers died first?
+  GT: ronnie disambiguation; ronnie; ronnie song
+  Pred: Ronnie Kray
+[triviaqa] #150 | EM=NO | F1=0.00 | Contain=YES | running EM=93/150 (62.00%) | running F1=0.70
+  Q: Marmalade is which bear's favourite sandwich filling?
+  GT: paddington bear; paddington brown; darkest peru; 32 windsor gardens; bear called paddington
+  Pred: marmalade
+[triviaqa] #151 | EM=YES | F1=1.00 | Contain=YES | running EM=94/151 (62.25%) | running F1=0.70
+  Q: In which country does The Girl From Ipanema live
+  GT: federative republic of brazil; brazil country; brésil; republica federativa do brasil; iso 3166 1 br; bresil; etymology of brazil; federal republic of brazil...
+  Pred: Brazil
+[triviaqa] #152 | EM=YES | F1=1.00 | Contain=YES | running EM=95/152 (62.50%) | running F1=0.71
+  Q: Which American city experienced an earthquake in the early hours of January 17th 1994?
+  GT: l; la la land; el lay; el pueblo de nuestra señora reina de los ángeles de la porciuncula; el pueblo de la reina de los angeles ca; nuestra señora la reina d...
+  Pred: Los Angeles
+[triviaqa] #153 | EM=YES | F1=1.00 | Contain=YES | running EM=96/153 (62.75%) | running F1=0.71
+  Q: What name is given to someone who starts fires maliciously?
+  GT: serial arsonist; conflagrators; torched up; arsonist; arsonistical; pyroterrorism; arsonists; arsons; malicious incendiarism; conflagrator; set on fire; arso...
+  Pred: arsonist
+[triviaqa] #154 | EM=NO | F1=0.13 | Contain=NO | running EM=96/154 (62.34%) | running F1=0.70
+  Q: In 'Toy Story 2' what was the character 'Bullseye'?
+  GT: basketball activities; bump game; horse or pig stipulations in basketball; variations of basketball; horse game; knockout non violent game; knockout basketba...
+  Pred: Woody's trusty toy steed from the "Woody's Roundup" gang.
+[triviaqa] #155 | EM=YES | F1=1.00 | Contain=YES | running EM=97/155 (62.58%) | running F1=0.71
+  Q: Who is the author of the 'Harry Potter' books?
+  GT: harry potter encyclopaedia; robert galbraith pseudonym; robert galbraith pen name; joanne kathalene rowling; very good lives; elephant house edinburgh café; ...
+  Pred: J.K. Rowling
+[triviaqa] #156 | EM=YES | F1=1.00 | Contain=YES | running EM=98/156 (62.82%) | running F1=0.71
+  Q: Who had a number one in 2011 with Grenade
+  GT: peter g hernandez; gene hernandez; peter gene hernandez; peter hernandez; bruno hernandez; gypsy love album; killa on run; bruno mars; peter gene bayot herna...
+  Pred: Bruno Mars
+[triviaqa] #157 | EM=NO | F1=0.00 | Contain=NO | running EM=98/157 (62.42%) | running F1=0.70
+  Q: What nationality was Aristotle Onassis originally
+  GT: anatolian turkish; turkish disambiguation; turkish
+  Pred: Greek
+[triviaqa] #158 | EM=NO | F1=0.67 | Contain=YES | running EM=98/158 (62.03%) | running F1=0.70
+  Q: What is the Great Smoo?
+  GT: cave; cave video games; cave surname; cave disambiguation
+  Pred: Smoo Cave
+[triviaqa] #159 | EM=NO | F1=0.50 | Contain=YES | running EM=98/159 (61.64%) | running F1=0.70
+  Q: If you dress in clothes of the opposite sex, you are a what (no rude answers please!)?
+  GT: transvestic; gynemimetophile; transvestism disambiguation; tranvestite; transfestites; transvestitism; transvestism; transvestites; transvestite
+  Pred: Transvestite/Cross dresser
+[triviaqa] #160 | EM=NO | F1=0.57 | Contain=YES | running EM=98/160 (61.25%) | running F1=0.70
+  Q: What did Davey Crocket call his rifle
+  GT: old betsy
+  Pred: Old Betsy and Pretty Betsy
+[triviaqa] #161 | EM=NO | F1=0.13 | Contain=YES | running EM=98/161 (60.87%) | running F1=0.70
+  Q: What happens at the 'Tower of London' at 9.40 every evening?
+  GT: ceremony of keys
+  Pred: The Yeoman Warders perform the "Last Rounds" ceremony at 9:40 pm every evening.
+[triviaqa] #162 | EM=YES | F1=1.00 | Contain=YES | running EM=99/162 (61.11%) | running F1=0.70
+  Q: Who in verse sailed to the land where the bong tree grows
+  GT: goatlyboatly; owl and pussy cat; goatly boatly; owl and pussycat
+  Pred: The owl and the pussy cat
+[triviaqa] #163 | EM=YES | F1=1.00 | Contain=YES | running EM=100/163 (61.35%) | running F1=0.70
+  Q: Who was Humphrey Bogart's female co-star in Casablanca
+  GT: isotta ingrid rossellini; ingrid rossellini; ingrid berman; ingrid bergmann; ingrid bergman
+  Pred: Ingrid Bergman
+[triviaqa] #164 | EM=NO | F1=0.20 | Contain=NO | running EM=100/164 (60.98%) | running F1=0.70
+  Q: The hall of fame for what sport is located in Saratoga Springs, NY, in which the announcement of new inductees is usually made on the first Saturday in May i...
+  GT: horseracing; horserace; race horse; horse races; pony racing; scratch sheet; racehorse; racing horse; racehorses; keiba; horse racing; horse racing venue; ho...
+  Pred: National Museum of Racing and Hall of Fame
+[triviaqa] #165 | EM=NO | F1=0.00 | Contain=NO | running EM=100/165 (60.61%) | running F1=0.69
+  Q: Which is the largest city in the USA?
+  GT: us ny; n y; neo york; 11th state; new york state s; nýja jórvík; new yourk; new york us; new york; estado nueva york; nova york; ny state; state new york; ne...
+  Pred: Yakutat, Alaska
+[triviaqa] #166 | EM=YES | F1=1.00 | Contain=YES | running EM=101/166 (60.84%) | running F1=0.70
+  Q: Who had an August 1969 No.1 with 'In The Year 2525 (Exordium And Terminus)'?
+  GT: zager and evans; denny zager; zager guitar; rick evans; zager evans
+  Pred: Zager and Evans
+[triviaqa] #167 | EM=YES | F1=1.00 | Contain=YES | running EM=102/167 (61.08%) | running F1=0.70
+  Q: Who won an Oscar for his part in The Deer Hunter
+  GT: christopher wlaken; ronald walken; christopher walken for president; christopher walkin; chris walken; ronnie walken; popcorn shrimp; christopher walken
+  Pred: Christopher Walken
+[triviaqa] #168 | EM=YES | F1=1.00 | Contain=YES | running EM=103/168 (61.31%) | running F1=0.70
+  Q: Which Italian city is the setting for Romeo and Juliet?
+  GT: san michele extra; un locode itvrn; verona italy; walsch bern; city of verona; welschbern; commune of verona; vetona; waelsch bern; verona; wälsch bern
+  Pred: Verona
+[triviaqa] #169 | EM=NO | F1=0.67 | Contain=YES | running EM=103/169 (60.95%) | running F1=0.70
+  Q: For which trade is Saville Row best known?
+  GT: sartorially; sartorialism; sartorial; tailors; tailor made; tailoring; tailor; master tailor; tailored; tailoress; personal tailoring; sartorialists
+  Pred: bespoke tailoring
+[triviaqa] #170 | EM=YES | F1=1.00 | Contain=YES | running EM=104/170 (61.18%) | running F1=0.70
+  Q: December 21, 1937 saw the premiere of what feature film, the first full length animated feature film?
+  GT: show white and seven dwarves; snow white; snowwhite; schneewittchen und die sieben zwerge; mirror mirror on wall; schneewittchen; snow white and seven dwarfs...
+  Pred: Snow White and the Seven Dwarfs
+[triviaqa] #171 | EM=YES | F1=1.00 | Contain=YES | running EM=105/171 (61.40%) | running F1=0.70
+  Q: Who wrote the books 'Bondage of Love', 'Branded Man' and 'Kate Hannigan'?
+  GT: bill bailey trilogy; catherine ann davies; catherine marchant; katie mcmullen; catherine ann mcmullen; mary ann shaughnessy; tilly trotter; dame catherine co...
+  Pred: Catherine Cookson
+[triviaqa] #172 | EM=YES | F1=1.00 | Contain=YES | running EM=106/172 (61.63%) | running F1=0.70
+  Q: Which car manufacturer makes the Jazz model?
+  GT: honda werther; 本田; soltec; honda soltec; honda motor manufacturing; honda atv; honda technologies; honda corporation; hero honda passion plus; honda motorcyc...
+  Pred: Honda
+[triviaqa] #173 | EM=NO | F1=0.00 | Contain=NO | running EM=106/173 (61.27%) | running F1=0.70
+  Q: Psychologists says men who wear what during sex are insecure?
+  GT: knee socks; wool socks; socks bag; fuzzy socks; gym socks; athletic sock; gym sock; trainer socks; low cut socks; tube sock; socks link; sock; socks
+  Pred: tightie-whities
+[triviaqa] #174 | EM=YES | F1=1.00 | Contain=YES | running EM=107/174 (61.49%) | running F1=0.70
+  Q: Who led the quest for the golden fleece
+  GT: iason; iasson; jason and golden fleece; jason greek mythology; easun; jason argonaut; jason; jason mythology
+  Pred: Jason
+[triviaqa] #175 | EM=YES | F1=1.00 | Contain=YES | running EM=108/175 (61.71%) | running F1=0.70
+  Q: What fairy tale features a wolf who tries to “huff and puff and blow your house in”?
+  GT: 3 little pigs; three little pigs
+  Pred: The Three Little Pigs
+[triviaqa] #176 | EM=YES | F1=1.00 | Contain=YES | running EM=109/176 (61.93%) | running F1=0.71
+  Q: Who won the gold medal for the men's super heavyweight boxing?
+  GT: anthony joshua
+  Pred: Anthony Joshua
+[triviaqa] #177 | EM=YES | F1=1.00 | Contain=YES | running EM=110/177 (62.15%) | running F1=0.71
+  Q: In which country would you find the city of 'Ghent'?
+  GT: cockpit of europe; koninkrijk belgie; königreich belgien; belgië; begium; konigreich belgien; belgie; quebec of europe; belgio; iso 3166 1 be; administrative...
+  Pred: Belgium
+[triviaqa] #178 | EM=YES | F1=1.00 | Contain=YES | running EM=111/178 (62.36%) | running F1=0.71
+  Q: With 47 attacks in the year 2010 alone, what body of water is known as Pirate Alley?
+  GT: aden gulf of; khalīj adan; pirate alley; gulf of aden; gulf of berbera; خليج عدن; gacanka cadmeed
+  Pred: Gulf of Aden
+[triviaqa] #179 | EM=YES | F1=1.00 | Contain=YES | running EM=112/179 (62.57%) | running F1=0.71
+  Q: Who followed Hugh Gaitskell as leader of the labour party?
+  GT: harold wilson s; james harold wilson; baron wilson of rievaulx; harold wilson baron wilson of rievaulx; harold wilson; shadow cabinet of harold wilson; james...
+  Pred: Harold Wilson
+[triviaqa] #180 | EM=YES | F1=1.00 | Contain=YES | running EM=113/180 (62.78%) | running F1=0.71
+  Q: "Who duetted with Bryan Adams on the 1985 hit ""It's Only Love""?"
+  GT: tinna turner; tina turner s; tina turner; tina tuner; anna bullock; annie mae bullock; anna mae bullock
+  Pred: Tina Turner
+[triviaqa] #181 | EM=YES | F1=1.00 | Contain=YES | running EM=114/181 (62.98%) | running F1=0.71
+  Q: What is the surname of the family in the book Little Women by Louisa May Alcott
+  GT: march observances; sušec; march; month of march; month march; march month; ㋂
+  Pred: March
+[triviaqa] #182 | EM=NO | F1=0.31 | Contain=YES | running EM=114/182 (62.64%) | running F1=0.71
+  Q: What is the stage name of double act 'Ian and Janet Tough?
+  GT: jeanette krankie; krankies television; krankies; ian tough; wee jimmy krankie; fandabby dozie; janette krankie; jimmy krankie; janette tough
+  Pred: No Match
+[triviaqa] #183 | EM=YES | F1=1.00 | Contain=YES | running EM=115/183 (62.84%) | running F1=0.71
+  Q: By what name is singer 'Anthony Dominic Benevetto' better known?
+  GT: bennett tony; anthony benedetto; joe bari; anthony dominick benedetto; tony bennet; tony bennett singer; tony bennett; anthony dominick bennett
+  Pred: Anthony Dominick Benedetto
+[triviaqa] #184 | EM=YES | F1=1.00 | Contain=YES | running EM=116/184 (63.04%) | running F1=0.72
+  Q: In the human body, the adrenal glands are located near what organ(s)?
+  GT: interstitial kidney cells; renal; nephrous; cortical collecting tubule cell; inner medullary collecting duct cell; pole of kidney; renal agents; kidney; rena...
+  Pred: kidneys
+[triviaqa] #185 | EM=NO | F1=0.00 | Contain=NO | running EM=116/185 (62.70%) | running F1=0.71
+  Q: Who was the snooker player that beat Steve Davis in a world snooker final after being 8 - 0 down?
+  GT: den taylor; denis taylor; dennis taylor
+  Pred: Ronnie O'Sullivan
+[triviaqa] #186 | EM=YES | F1=1.00 | Contain=YES | running EM=117/186 (62.90%) | running F1=0.71
+  Q: Between 20 and 30 miles thick above water (3 to 6 miles thick beneath the ocean), what is the geologic term for the part of the earth that sits on top of the...
+  GT: crustal; crust formation; crust disambiguation; cruſt; crust
+  Pred: crust
+[triviaqa] #187 | EM=YES | F1=1.00 | Contain=YES | running EM=118/187 (63.10%) | running F1=0.71
+  Q: Who was the star of the 1940 satirical film 'The Great Dictator'?
+  GT: sir charlie chaplin; charlie chaplan; charlie chaplain; sir charles chaplin; roy export company establishment; charles chaplin; charles spencer chaplin; char...
+  Pred: Charlie Chaplin
+[triviaqa] #188 | EM=YES | F1=1.00 | Contain=YES | running EM=119/188 (63.30%) | running F1=0.72
+  Q: What gas is necessary for plants to perform photosynthesis?
+  GT: atc code v03an02; r744; carbondioxide; fixed air; carbonic gas; carbon dioxide; carbonic acid gas; co²; r 744; carban dioxide; acidum mephiticum; o c o; carb...
+  Pred: carbon dioxide
+[triviaqa] #189 | EM=YES | F1=1.00 | Contain=YES | running EM=120/189 (63.49%) | running F1=0.72
+  Q: Who had a No 1 in the 80's with Karma Chameleon
+  GT: culture club
+  Pred: Culture Club
+[triviaqa] #190 | EM=YES | F1=1.00 | Contain=YES | running EM=121/190 (63.68%) | running F1=0.72
+  Q: 'Roquefort Cheese' is made from what sort of milk?
+  GT: ewe milk; ewes milk; sheep milk; ewe s milk; sheep s milk; sheeps milk
+  Pred: sheep's milk
+[triviaqa] #191 | EM=YES | F1=1.00 | Contain=YES | running EM=122/191 (63.87%) | running F1=0.72
+  Q: In which Canadian city is the Lion's Gate Bridge?
+  GT: south vancouver british columbia; vansterdam; vancouvr; vancouver bc; vancover; vancouver british colombia; hong kouver; vancouver; vancouver bc canada; vanc...
+  Pred: Vancouver
+[triviaqa] #192 | EM=YES | F1=1.00 | Contain=YES | running EM=123/192 (64.06%) | running F1=0.72
+  Q: Who was the original bass guitarist with The Who
+  GT: john alec entwistle; john entwistle bogey man; thunderfingers; bogey man song; john entwistle s; john entwhistle; john entwistle; jon entwistle
+  Pred: John Entwistle
+[triviaqa] #193 | EM=YES | F1=1.00 | Contain=YES | running EM=124/193 (64.25%) | running F1=0.72
+  Q: Who played Dr Richard Kimble in the 1993 film The Fugitive?
+  GT: harrison ford; ford harrison; harison ford; harrison ford actor
+  Pred: Harrison Ford
+[triviaqa] #194 | EM=YES | F1=1.00 | Contain=YES | running EM=125/194 (64.43%) | running F1=0.72
+  Q: Which disc jockey used to advertise Brentford Nylon
+  GT: fluff freeman; 22fluff 22 freeman; alan 22fluff 22 freeman; alan freeman
+  Pred: Alan Freeman
+[triviaqa] #195 | EM=NO | F1=0.08 | Contain=YES | running EM=125/195 (64.10%) | running F1=0.72
+  Q: Which European city was the venue for the first three World Athletic Championships
+  GT: helsset; city of helsinki; helinski; helsinkiem; demographics of helsinki; helsingfors; un locode fihel; helsinki finland; helstinky; stadi; helsinky; helsin...
+  Pred: No Match
+[triviaqa] #196 | EM=YES | F1=1.00 | Contain=YES | running EM=126/196 (64.29%) | running F1=0.72
+  Q: In which month of 1929 did the St Valentines Day massacre take place?
+  GT: februray; ㋁; svečan; february; national lactose intolerance awareness month; februarie; feb; feburary; febuary; lactose intolerance awareness month
+  Pred: February
+[triviaqa] #197 | EM=NO | F1=0.67 | Contain=YES | running EM=126/197 (63.96%) | running F1=0.72
+  Q: Who played the role of painter Vincent Van Gogh in the film Lust For Life
+  GT: douglas; douglas disambiguation
+  Pred: Kirk Douglas
+[triviaqa] #198 | EM=NO | F1=0.00 | Contain=YES | running EM=126/198 (63.64%) | running F1=0.72
+  Q: Pearmain is a variety of what?
+  GT: apple fruit; سێو; malus pumila; apple trees; 🍏; malus domesticus; apple blossom; apples and teachers; dried apple; aplle; apple; malus communis; apple tree; ...
+  Pred: Worcester Pearmain
+[triviaqa] #199 | EM=YES | F1=1.00 | Contain=YES | running EM=127/199 (63.82%) | running F1=0.72
+  Q: "In what year did Glen Campbell have a hit with ""It's Only Make Believe""?"
+  GT: 1970; one thousand nine hundred and seventy
+  Pred: 1970
+[triviaqa] #200 | EM=YES | F1=1.00 | Contain=YES | running EM=128/200 (64.00%) | running F1=0.72
+  Q: What name is given to the paradoxical psychological phenomenon wherein hostages express adulation and have positive feelings towards their captors that appea...
+  GT: association with aggressor; stockholm syndrome; lima syndrome; stockholm syndrom; capture bonding; stockholm effect; possible examples of stockholm syndrome;...
+  Pred: Stockholm Syndrome
+[triviaqa] #201 | EM=NO | F1=0.28 | Contain=YES | running EM=128/201 (63.68%) | running F1=0.72
+  Q: What would you see at the Donington Collection
+  GT: grand prix racing cars
+  Pred: The Donington Collection features a wide range of Grand Prix racing cars, including Williams F1, McLaren, Force India, Vanwall, BRM, and many other rare and historic cars.
+[triviaqa] #202 | EM=YES | F1=1.00 | Contain=YES | running EM=129/202 (63.86%) | running F1=0.72
+  Q: In which London park would you find the Zoological Gardens?
+  GT: regent s park london; queen mary s gardens; regents park; regent s park
+  Pred: The Regent's Park
+[triviaqa] #203 | EM=YES | F1=1.00 | Contain=YES | running EM=130/203 (64.04%) | running F1=0.72
+  Q: Can you name the river that flows through Cardiff?
+  GT: afon tâf; taff valley; nant ffrwd; nant rhydycar; river taff; taf fawr; taf fechan; nant clydach; taff river
+  Pred: River Taff
+[triviaqa] #204 | EM=YES | F1=1.00 | Contain=YES | running EM=131/204 (64.22%) | running F1=0.72
+  Q: Chesney Allen formed a double act with which famous entertainer?
+  GT: bud flanagan; bud flannagan
+  Pred: Bud Flanagan
+[triviaqa] #205 | EM=YES | F1=1.00 | Contain=YES | running EM=132/205 (64.39%) | running F1=0.72
+  Q: What type of aircraft was used by Alcock and Brown when they became the first men to fly the Atlantic non stop?
+  GT: vickers commercial; vickers vimy commercial; vickers vimy; vickers fb 27 vimy; vickers vimy ambulance; vickers f b 27 vimy; n f express les mureaux
+  Pred: Vickers Vimy
+[triviaqa] #206 | EM=YES | F1=1.00 | Contain=YES | running EM=133/206 (64.56%) | running F1=0.73
+  Q: Can you name the singer of the title track for '1997 - Tomorrow Never Dies'?
+  GT: cheryl crow; crow sheryl; sheryl crowe; sheryl suzanne crow; sheryl crow
+  Pred: Sheryl Crow
+[triviaqa] #207 | EM=YES | F1=1.00 | Contain=YES | running EM=134/207 (64.73%) | running F1=0.73
+  Q: Founded in 1775, George Washington was the Commander-in-Chief of what Army?
+  GT: continental army; american continental army; continental soldiers
+  Pred: Continental Army
+[triviaqa] #208 | EM=YES | F1=1.00 | Contain=YES | running EM=135/208 (64.90%) | running F1=0.73
+  Q: How often does a Hebdomadal Council meet?
+  GT: calendar week; seven night; weeks; 7 day week; chinese week; se nnights; hermetic lunar week calendar; week; liturgical week; week liturgical; sevennights; s...
+  Pred: weekly
+[triviaqa] #209 | EM=YES | F1=1.00 | Contain=YES | running EM=136/209 (65.07%) | running F1=0.73
+  Q: A Paris grocer was jailed for two years in 1978 stabbing wife what?
+  GT: wedge of hard cheese
+  Pred: A wedge of hard cheese
+[triviaqa] #210 | EM=YES | F1=1.00 | Contain=YES | running EM=137/210 (65.24%) | running F1=0.73
+  Q: The inaugural issue of what comic book, which was released in June, 1938, introduced Superman?
+  GT: chuck dawson; action comics; action comics weekly
+  Pred: Action Comics
+[triviaqa] #211 | EM=YES | F1=1.00 | Contain=YES | running EM=138/211 (65.40%) | running F1=0.73
+  Q: In The Simpsons, how is Marion Anthony D'Amico, Springfield's Mafia boss, better known
+  GT: fat tony; fat tony disambiguation
+  Pred: Fat Tony
+[triviaqa] #212 | EM=YES | F1=1.00 | Contain=YES | running EM=139/212 (65.57%) | running F1=0.73
+  Q: Who was the last woman hanged in Britain
+  GT: ruth ellis; david blakely
+  Pred: Ruth Ellis
+[triviaqa] #213 | EM=NO | F1=0.50 | Contain=YES | running EM=139/213 (65.26%) | running F1=0.73
+  Q: At which film festival could you be awarded the 'Palm d'Or'?
+  GT: un locode frceq; cannes france; cannes; weather in cannes
+  Pred: Cannes Film Festival
+[triviaqa] #214 | EM=YES | F1=1.00 | Contain=YES | running EM=140/214 (65.42%) | running F1=0.73
+  Q: Which part of the human body contains the most gold?
+  GT: periungual region; fingernail ingrowing; toe nail; longest fingernails; toe nails; toenails; finger nail; unguis; hyponychial; nail anatomy; long nails; long...
+  Pred: toenails
+[triviaqa] #215 | EM=NO | F1=1.00 | Contain=NO | running EM=140/215 (65.12%) | running F1=0.74
+  Q: The territory of Idaho, formed on this day in 1863, later was divided up into what 3 states?
+  GT: idaho montana and wyoming
+  Pred: Wyoming, Montana, and Idaho
+[triviaqa] #216 | EM=YES | F1=1.00 | Contain=YES | running EM=141/216 (65.28%) | running F1=0.74
+  Q: What popular opera, penned by George Bizet, is a story about a female cigarette factory worker?
+  GT: carmen by george bizet; les tringles des sistres tintaient; carmen opera; carmen; escamillo
+  Pred: Carmen
+[triviaqa] #217 | EM=YES | F1=1.00 | Contain=YES | running EM=142/217 (65.44%) | running F1=0.74
+  Q: Which was Disney's second animated film?
+  GT: pinocchio boy; pinnocchio; pinochio; pinnochio; pinocchio in popular culture; pinocchio; pinnochio boy
+  Pred: Pinocchio
+[triviaqa] #218 | EM=NO | F1=0.00 | Contain=NO | running EM=142/218 (65.14%) | running F1=0.73
+  Q: What do antique dealers call old wooden utensils such as soupspoons, bowls etc
+  GT: treen disambiguation; treen
+  Pred: vintage kitchenalia or wooden ware
+[triviaqa] #219 | EM=NO | F1=0.00 | Contain=NO | running EM=142/219 (64.84%) | running F1=0.73
+  Q: I n dressmaking what are featherweight, skirt weight and open ended
+  GT: zips; baldo amato; siggies
+  Pred: No Match
+[triviaqa] #220 | EM=YES | F1=1.00 | Contain=YES | running EM=143/220 (65.00%) | running F1=0.73
+  Q: Now a part of Carnival Corporation, what shipping company commissioned and sailed the RMS Titanic?
+  GT: white star liner; ismay imrie and company; oceanic steam navigation company; white star line; oceanic steam navigation company ltd; white star line of boston...
+  Pred: White Star Line
+[triviaqa] #221 | EM=YES | F1=1.00 | Contain=YES | running EM=144/221 (65.16%) | running F1=0.73
+  Q: Which band started life as 'Feedback' and then became 'The Hype' before settling on their current name?
+  GT: u2 lyrics; u2; flowering rose of glastonbury; u2 band; you 2; u2 music; u2 com; dennis sheehan
+  Pred: U2
+[triviaqa] #222 | EM=YES | F1=1.00 | Contain=YES | running EM=145/222 (65.32%) | running F1=0.73
+  Q: What is the art of clipping bushes into shapes known as
+  GT: topiary work; topiarius; topiary
+  Pred: Topiary
+[triviaqa] #223 | EM=YES | F1=1.00 | Contain=YES | running EM=146/223 (65.47%) | running F1=0.74
+  Q: What is the title of the 2009 biopic film directed by Sam Taylor-Wood about the early life of John Lennon
+  GT: nowhere boy
+  Pred: Nowhere Boy
+[triviaqa] #224 | EM=YES | F1=1.00 | Contain=YES | running EM=147/224 (65.62%) | running F1=0.74
+  Q: December 23, 1923 was the birthday of Vice Admiral James Stockdale, one of the most highly decorated officers in the history of the US Navy. He was also the ...
+  GT: h perot; henry ross perot; henry perot; henry ross perot sr; h ross perot; ross perot presidential campaign 1996; henry r perot; ross perot; perot foundation...
+  Pred: Ross Perot
+[triviaqa] #225 | EM=NO | F1=0.00 | Contain=YES | running EM=147/225 (65.33%) | running F1=0.73
+  Q: What are listed across the top of the Lincoln Memorial on the back of the $5 bill?
+  GT: all 50 states
+  Pred: 26
+[triviaqa] #226 | EM=NO | F1=0.00 | Contain=NO | running EM=147/226 (65.04%) | running F1=0.73
+  Q: In a poll conducted in the early 1970's who was voted the most hated man in history
+  GT: hitler s medical health; adlof hitler; adolf hiedler; hitler adolf; hitleradolf; adolpf hitler; history of adolf hitler; hitleradolph; adolphhitler; adolf hi...
+  Pred: Richard Nixon
+[triviaqa] #227 | EM=YES | F1=1.00 | Contain=YES | running EM=148/227 (65.20%) | running F1=0.73
+  Q: According to Arthurian legend, Arthur's wife Guinevere, had a little on the side with which Knight of the Round Table?
+  GT: joyousgard; launcelot; launcelot du lac; arondight; sir lancelot du lac; joyous gard; llenlleawg; sir launcelot; lancelot of lake; joyous garde; lancelot du ...
+  Pred: Lancelot
+[triviaqa] #228 | EM=YES | F1=1.00 | Contain=YES | running EM=149/228 (65.35%) | running F1=0.73
+  Q: The result of a tryst with the wife of his bitter enemy, what legendary English ruler is the bastard son of Igraine and Uther Pendragon?
+  GT: arthur legend; arthurian lore; arthurian legends; king arthur s family tree; arthurian legend; arthur of britain; arthur eld; legend of king arthur; arthur p...
+  Pred: King Arthur
+[triviaqa] #229 | EM=NO | F1=0.00 | Contain=NO | running EM=149/229 (65.07%) | running F1=0.73
+  Q: A "coyote" is a slang term used to describe someone who smuggles what across the U.S. border?
+  GT: people; 👥; peeple
+  Pred: illegal immigrants
+[triviaqa] #230 | EM=NO | F1=0.80 | Contain=YES | running EM=149/230 (64.78%) | running F1=0.73
+  Q: What is the ancient counting frame using wires and beads called
+  GT: counting frame; abacuses; abacist; reckoning frame; nepohualtzintzin; abacists; abacus aztec; abacus arithmetic; abacus mathematics; counting frames; cranmer...
+  Pred: Bead Frame Abacus
+[triviaqa] #231 | EM=YES | F1=1.00 | Contain=YES | running EM=150/231 (64.94%) | running F1=0.73
+  Q: Every major league baseball team has retired the number 42, in honor of what player who was born on January 31, 1919?
+  GT: jackie robinson athlete; jack roosevelt robinson; jack r robinson; jack roosevelt 22jackie 22 robinson; robinson jackie; jackie robinson
+  Pred: Jackie Robinson
+[triviaqa] #232 | EM=YES | F1=1.00 | Contain=YES | running EM=151/232 (65.09%) | running F1=0.73
+  Q: What was the first hospital soap opera on ITV
+  GT: emergency ward ten; emergency – ward 10; emergency ward 10; oxbridge general
+  Pred: Emergency Ward Ten
+[triviaqa] #233 | EM=YES | F1=1.00 | Contain=YES | running EM=152/233 (65.24%) | running F1=0.73
+  Q: The 1887 novel A Study in Scarlet introduced what classic fictional character?
+  GT: sherlockholmes; elementary my dear watson; shrlock holmes; inspector holmes; holmes and watson; sherlock holmes; sherlock holmes character; sherlock homes; t...
+  Pred: Sherlock Holmes
+[triviaqa] #234 | EM=YES | F1=1.00 | Contain=YES | running EM=153/234 (65.38%) | running F1=0.73
+  Q: What is the German term for wine made from fully ripened grapes
+  GT: kabinett; kabinettwein
+  Pred: Kabinett
+[triviaqa] #235 | EM=YES | F1=1.00 | Contain=YES | running EM=154/235 (65.53%) | running F1=0.74
+  Q: Who was the Roman god of the Sun
+  GT: sol sun; sol; sol disambiguation
+  Pred: Sol
+[triviaqa] #236 | EM=YES | F1=1.00 | Contain=YES | running EM=155/236 (65.68%) | running F1=0.74
+  Q: Who wrote the novel Cider With Rosie?
+  GT: laurie lee
+  Pred: Laurie Lee
+[triviaqa] #237 | EM=NO | F1=0.67 | Contain=YES | running EM=155/237 (65.40%) | running F1=0.74
+  Q: Of which tribe of Red Indians was Geronimo a chief
+  GT: ˀa˙paču; apache; apache indians; apacheans; apache nation; apaches; apache tribe; apache people; apche indian tribe; apachean
+  Pred: Chiricahua Apaches
+[triviaqa] #238 | EM=YES | F1=1.00 | Contain=YES | running EM=156/238 (65.55%) | running F1=0.74
+  Q: Which song begins If I was a sculptor but then again no
+  GT: your song; i hope you don t mind; your song ellie goulding song; your song song
+  Pred: Your Song
+[triviaqa] #239 | EM=YES | F1=1.00 | Contain=YES | running EM=157/239 (65.69%) | running F1=0.74
+  Q: The official beverage of Puerto Rico since 1978, what drink consists of rum, coconut cream, and pineapple juice?
+  GT: piña coladas; virgin piña colada; pina coladas; pinacolada; peanut colada; piña colada; pina colada; pina colata; pina collada; virgin pina colada
+  Pred: piña colada
+[triviaqa] #240 | EM=YES | F1=1.00 | Contain=YES | running EM=158/240 (65.83%) | running F1=0.74
+  Q: Which Tennis star was Brooke Shields once married to?
+  GT: andre agassy; andre agassi foundation for education; andre agassi foundation; andre agassi college preparatory academy; andré agassi; agassi stars; turner ag...
+  Pred: Andre Agassi
+[triviaqa] #241 | EM=NO | F1=0.00 | Contain=NO | running EM=158/241 (65.56%) | running F1=0.74
+  Q: What is the title of Max Bygraves autobiography
+  GT: i wanna tell you story
+  Pred: No information available
+[triviaqa] #242 | EM=NO | F1=0.00 | Contain=YES | running EM=158/242 (65.29%) | running F1=0.73
+  Q: Who did John McEnroe beat to win his first Wimbledon singles final?
+  GT: bjorn rune borg; björn rune borg; bjoern rune borg; bjorn borg; bjoern borg; bjørn borg; björn borg
+  Pred: Ivan Lendl
+[triviaqa] #243 | EM=YES | F1=1.00 | Contain=YES | running EM=159/243 (65.43%) | running F1=0.73
+  Q: What is prepared in a tannery?
+  GT: syntans; syntan; cordwain; reptile leather; cordova leather; vachetta leather; environmental impact of leather; old leather; pig leather; split leather; leat...
+  Pred: leather
+[triviaqa] #244 | EM=NO | F1=0.00 | Contain=NO | running EM=159/244 (65.16%) | running F1=0.73
+  Q: Lyrics: Some of them want to abuse you some of them want to be abused
+  GT: sweet dreams movie; sweet dreams disambiguation; sweet dreams song; sweet dreams film; sweet dreams; sweet dreams album; sweet dream
+  Pred: The lyrics "Some of them want to abuse you, some of them want to be abused" suggest a theme of power dynamics and mutual exploitation in relationships.
+[triviaqa] #245 | EM=YES | F1=1.00 | Contain=YES | running EM=160/245 (65.31%) | running F1=0.73
+  Q: After 23 years on the air, America's Most Wanted will be winding down. Who has been the host of the series since its inception?
+  GT: john walsh; jack walsh; johnny walsh; john walsh politician; walsh john; john walsh disambiguation
+  Pred: John Walsh
+[triviaqa] #246 | EM=NO | F1=0.03 | Contain=YES | running EM=160/246 (65.04%) | running F1=0.73
+  Q: The Springfield, Mass YMCA saw the first game of what played on January 20, 1892, when 9 players ended the game with a 1-0 score?
+  GT: men s basketball; baksetball; baketball; boy s basketball; basketball club; high school basketball; rim basketball; basketball team; bball; unicycle basketba...
+  Pred: No Match
+[triviaqa] #247 | EM=NO | F1=0.57 | Contain=YES | running EM=160/247 (64.78%) | running F1=0.73
+  Q: In which English county is there a town called Shitlingthorpe
+  GT: yorkshire county; yorkshire england; yorkshire uk; name of yorkshire; county of yorkshire; yorkshire; yorkshuh; yorkshire traditional; yorkshireman; god s ow...
+  Pred: East Riding of Yorkshire
+[triviaqa] #248 | EM=YES | F1=1.00 | Contain=YES | running EM=161/248 (64.92%) | running F1=0.73
+  Q: The opera The Tsar Sultan contains what famous musical piece?
+  GT: flight of bumblebee; flight of bumblebee rimsky korsakov; flight of bumble bee
+  Pred: Flight of the Bumblebee
+[triviaqa] #249 | EM=YES | F1=1.00 | Contain=YES | running EM=162/249 (65.06%) | running F1=0.73
+  Q: In what card game do you need the queen of spades to shoot the moon?
+  GT: partner hearts; hearts card game; chase lady; hearts game; rickety kate; complex hearts; hearts; game of hearts; shooting moon; hearts strategy; royal hearts
+  Pred: Hearts
+[triviaqa] #250 | EM=NO | F1=0.00 | Contain=YES | running EM=162/250 (64.80%) | running F1=0.73
+  Q: Which constituency does William Hague represent?
+  GT: richmond; richmond quebec electoral district; richmond australia; richmond electoral district; richmond england; richmond usa; richmond nova scotia electoral...
+  Pred: Unknown
+[triviaqa] #251 | EM=NO | F1=0.00 | Contain=NO | running EM=162/251 (64.54%) | running F1=0.73
+  Q: Beaufort who created The Wind Scale had which profession ?
+  GT: sailor; expert seamen; mariner; seafarers; boatmen; boatmanship; merchant mariner; seafarer; sailors
+  Pred: Hydrographer
+[triviaqa] #252 | EM=NO | F1=0.40 | Contain=YES | running EM=162/252 (64.29%) | running F1=0.72
+  Q: What name was given to the eleven states that fought the Union in the US Civil War?
+  GT: confederacies; confederacy; confederate; confederacy disambiguation; confederates
+  Pred: Confederate States of America
+[triviaqa] #253 | EM=NO | F1=0.01 | Contain=NO | running EM=162/253 (64.03%) | running F1=0.72
+  Q: What "moderately famous" ship left Southampton, England, before stopping at Cherbourg, France and Queenstown, Ireland before stopping floating?
+  GT: rms titantic; rms 22titanic 22; titanicc; rms titanick; hms titanic; titantic; 100th anniversary of sinking of rms titanic; rms titanic; royal mail steamer t...
+  Pred: No Match
+[triviaqa] #254 | EM=NO | F1=0.75 | Contain=YES | running EM=162/254 (63.78%) | running F1=0.72
+  Q: At what 1876 battle was the US Army's 7th Cavalry wiped out to a man, leaving only a horse, Comanche, alive?
+  GT: little bighorn disambiguation; little bighorn; little big horn
+  Pred: Battle of the Little Big Horn
+[triviaqa] #255 | EM=NO | F1=0.00 | Contain=YES | running EM=162/255 (63.53%) | running F1=0.72
+  Q: Deficiency in which vitamin causes Beri-Beri?
+  GT: b 1 disambiguation; b1 disambiguation; b 1; b1
+  Pred: Thiamine
+[triviaqa] #256 | EM=YES | F1=1.00 | Contain=YES | running EM=163/256 (63.67%) | running F1=0.72
+  Q: April 5, 1614 saw early American settler and tobacco exporter John Rolfe marry who?
+  GT: pocahontas; pocohantas; amonute; princess matoika; rebecca rolfe; princess matoaka; pocahontes; pocahantas; pocahauntus; pochahantas; pokahontas; pocohantus;...
+  Pred: Pocahontas
+[triviaqa] #257 | EM=YES | F1=1.00 | Contain=YES | running EM=164/257 (63.81%) | running F1=0.72
+  Q: On what date does St. David’s Day fall?
+  GT: historical anniversaries march 1; 1st march; 1 march; mar 01; 1st of march; march 1; mar 1; march 1st; march 01
+  Pred: March 1
+[triviaqa] #258 | EM=YES | F1=1.00 | Contain=YES | running EM=165/258 (63.95%) | running F1=0.72
+  Q: What name is used in the Roman Catholic Church for evensong?
+  GT: music of vespers; vespers; vespires; great vespers; vespers music of; visperas; solemn vespers; lucernarium
+  Pred: Vespers
+[triviaqa] #259 | EM=NO | F1=0.00 | Contain=NO | running EM=165/259 (63.71%) | running F1=0.72
+  Q: Who was Inspector Clouseau's manservant?
+  GT: katō; kato
+  Pred: Cato
+[triviaqa] #260 | EM=YES | F1=1.00 | Contain=YES | running EM=166/260 (63.85%) | running F1=0.72
+  Q: Which English writer died on the same day as Spanish writer 'Miguel de Cervantes' in 1616?
+  GT: shakespearean; shakespeere; william shakespear; shakspere william; bill shakespeare; william shekspere; willaim shakespear; shakesepare; shakespearian litera...
+  Pred: William Shakespeare
+[triviaqa] #261 | EM=NO | F1=0.00 | Contain=YES | running EM=166/261 (63.60%) | running F1=0.72
+  Q: What synthetic opioid is used to help treat heroin addiction?
+  GT: dolophin; adolophine; ketalgin; methidone; algidon; methadon; butalgin; heptadon; algolysin; atc code n07bc02; algovetin; methadose; physeptone; fenadone; do...
+  Pred: Buprenorphine
+[triviaqa] #262 | EM=NO | F1=0.67 | Contain=YES | running EM=166/262 (63.36%) | running F1=0.72
+  Q: Which Apollo mission, which was launched on July 16, 1969, was the first to put a human on the moon?
+  GT: eleven; 11
+  Pred: Apollo 11
+[triviaqa] #263 | EM=YES | F1=1.00 | Contain=YES | running EM=167/263 (63.50%) | running F1=0.72
+  Q: In orbit from 1973 to 1979, what was the name of the first space station launched by NASA, which met a firey end over the Pacific Ocean (and parts of Western...
+  GT: skylab program; sky lab; skylab; skylab i; project skylab; skylab 5; skylab 1; skylab one
+  Pred: Skylab
+[triviaqa] #264 | EM=YES | F1=1.00 | Contain=YES | running EM=168/264 (63.64%) | running F1=0.72
+  Q: What is the capital of the state of Oregon?
+  GT: salem disambiguation; salem; salem band
+  Pred: Salem
+[triviaqa] #265 | EM=YES | F1=1.00 | Contain=YES | running EM=169/265 (63.77%) | running F1=0.72
+  Q: An equilateral triangle has all 3 sides of the same length. What type of triangle only has 2 sides of equal length?
+  GT: isosceles; isoceles triangle; isoceles; isosceles triange; isosceles triangle
+  Pred: Isosceles Triangle
+[triviaqa] #266 | EM=YES | F1=1.00 | Contain=YES | running EM=170/266 (63.91%) | running F1=0.72
+  Q: What American industrialist is credited as the father of the modern assembly line?
+  GT: ford henry; fordian; henry ford i; henry ford; henry ford first; henry ford sr; ford person; 5 day; five dollar day
+  Pred: Henry Ford
+[triviaqa] #267 | EM=YES | F1=1.00 | Contain=YES | running EM=171/267 (64.04%) | running F1=0.72
+  Q: The male lead roll was played by whom in the 2001 film Moulin Rouge?
+  GT: ewan mcgregor; ewen macgregor; eve mavrakis; euan mcgregor; euan mcgreggor; ewan gordon mcgregor; euan macgregor; euan macgreggor; ewan macgregor; great pret...
+  Pred: Ewan McGregor
+[triviaqa] #268 | EM=YES | F1=1.00 | Contain=YES | running EM=172/268 (64.18%) | running F1=0.72
+  Q: Cape Verde was formerly a dependency of which European country
+  GT: portugul; portugallu; portugalska; pòtigal; portugaul; portugalujo; portuguese republic; iso 3166 1 pt; republic of portugal; portugalsko; portugual; bồ đào ...
+  Pred: Portugal
+[triviaqa] #269 | EM=NO | F1=0.67 | Contain=YES | running EM=172/269 (63.94%) | running F1=0.72
+  Q: In US motor racing, what colour flag would the driver see for 'one lap to go'?
+  GT: color white; white political adjective; whitishness; rgb 255 255 255; 255 255 255; ffffff; whitishly; white colour; man on white horse; white; whiter; white ...
+  Pred: White flag
+[triviaqa] #270 | EM=NO | F1=0.50 | Contain=YES | running EM=172/270 (63.70%) | running F1=0.72
+  Q: What controversial phenomenon is measured by Zener cards?
+  GT: e s p single; esp; esp disambiguation; e s p; esp album; e s p album
+  Pred: extrasensory perception (ESP)
+[triviaqa] #271 | EM=NO | F1=0.00 | Contain=NO | running EM=172/271 (63.47%) | running F1=0.72
+  Q: The world cup opens on Friday. Which country is hosting this year?
+  GT: zuidafrika; azania south africa; south africans; zuid africa; suid africa; afrique du sud; saffa; south africa s; third republic south africa; ningizimu afri...
+  Pred: England
+[triviaqa] #272 | EM=NO | F1=0.67 | Contain=YES | running EM=172/272 (63.24%) | running F1=0.72
+  Q: What Latin phrase, which translates as Out of many, one, is taken to mean One from Many?
+  GT: e pluribus unum; from many one; out of many one; unum e pluribus; e pluribus umun; e plu rib us u num; ex pluribus unum
+  Pred: Unus ex pluribus
+[triviaqa] #273 | EM=NO | F1=0.67 | Contain=YES | running EM=172/273 (63.00%) | running F1=0.72
+  Q: Known as the Hero of Haarlem, what did the little Dutch boy use to plug the leak in a dike?
+  GT: human finger; finger pulp; finger locking; finger wrinkling; inter phalangeal; pulp of finger; human fingers; digital pulp; finger; finger dueling; digiti ma...
+  Pred: his finger
+[triviaqa] #274 | EM=YES | F1=1.00 | Contain=YES | running EM=173/274 (63.14%) | running F1=0.72
+  Q: Patusnaya and mallasol are types of what?
+  GT: iranian caviar; caviar substitute; caviar caviare; black caviar; caviar; cavier; fish caviar; keviar; caviare; ikra
+  Pred: caviar
+[triviaqa] #275 | EM=YES | F1=1.00 | Contain=YES | running EM=174/275 (63.27%) | running F1=0.72
+  Q: A year ago today saw an explosion on what Gulf of Mexico oil drilling platform, operated by BP?
+  GT: deepwater horizon drilling rig; deepwater horizon rig; deepwater horizon; deep water horizon; deepwater horizon semi submersible; deepwater horizon oil rig; ...
+  Pred: Deepwater Horizon
+[triviaqa] #276 | EM=NO | F1=0.80 | Contain=NO | running EM=174/276 (63.04%) | running F1=0.72
+  Q: Al Capone's business card said he was a what?
+  GT: used furniture dealer
+  Pred: furniture dealer
+[triviaqa] #277 | EM=NO | F1=0.00 | Contain=NO | running EM=174/277 (62.82%) | running F1=0.72
+  Q: What was the name of the character played by Paul Newman in the film The Sting
+  GT: henry gondorf
+  Pred: No Match
+[triviaqa] #278 | EM=NO | F1=0.00 | Contain=NO | running EM=174/278 (62.59%) | running F1=0.72
+  Q: What won the Oscar for Best Animated Film in 2005?
+  GT: hum hain lajawab; incredibles; increibles; incredibles franchise; stratogale; incredibles series franchise; incredibles 2; incredibles family matters; incred...
+  Pred: Wallace & Gromit in The Curse of the Were-Rabbit
+[triviaqa] #279 | EM=YES | F1=1.00 | Contain=YES | running EM=175/279 (62.72%) | running F1=0.72
+  Q: The first civilians executed for espionage in the United States for passing atomic bomb secrets to the Soviets, what couple were given the electric chair in ...
+  GT: rosenberg trial; ethel greenglass rosenburg; julius ethel rosenberg; ethel and julius rosenberg; rosenburg case; ethel and julius rosenburg; julius and ethel...
+  Pred: Julius and Ethel Rosenberg
+[triviaqa] #280 | EM=YES | F1=1.00 | Contain=YES | running EM=176/280 (62.86%) | running F1=0.72
+  Q: What was the name of Winnie the Poohs human friend?
+  GT: chris robin; christopher robin winnie pooh; christopher robin
+  Pred: Christopher Robin
+[triviaqa] #281 | EM=YES | F1=1.00 | Contain=YES | running EM=177/281 (62.99%) | running F1=0.72
+  Q: In internet/texting parlance, what does tl;dr mean?
+  GT: tl dr; too long didn t read
+  Pred: too long; didn't read
+[triviaqa] #282 | EM=NO | F1=0.40 | Contain=YES | running EM=177/282 (62.77%) | running F1=0.72
+  Q: What airline, founding member of the Star Alliance, the largest airline alliance in the world, got its start as the Boeing Air Transport company in 1927?
+  GT: untied; united album; united; united album disambiguation; united song; united disambiguation; united film
+  Pred: United Air Lines, Inc.
+[triviaqa] #283 | EM=YES | F1=1.00 | Contain=YES | running EM=178/283 (62.90%) | running F1=0.72
+  Q: Aviemore, in Scotland is at the heart of which National Park?
+  GT: cairngorms national park authority; cairngorm partnership; cairngorms national park; pàirc nàiseanta mhonaidh ruaidh; cairngorm national park
+  Pred: Cairngorms National Park
+[triviaqa] #284 | EM=YES | F1=1.00 | Contain=YES | running EM=179/284 (63.03%) | running F1=0.72
+  Q: Masu, Chum, and Coho are all types of what?
+  GT: baked salmon; parr fish; salmon and trout; salmon zoology; alaskan salmon; land locked salmon; sake no dengaku; salmon fish; salmon
+  Pred: Salmon
+[triviaqa] #285 | EM=YES | F1=1.00 | Contain=YES | running EM=180/285 (63.16%) | running F1=0.72
+  Q: What is the name of the backing band for noted bluesman Stevie Ray Vaughan?
+  GT: double trouble 2012 film; double trouble; double trouble disambiguation; double trouble tv series; double trouble film; double trouble song; double trouble a...
+  Pred: Double Trouble
+[triviaqa] #286 | EM=YES | F1=1.00 | Contain=YES | running EM=181/286 (63.29%) | running F1=0.72
+  Q: What ice cream company produces flavors such as Everything But The.., Neapolitan Dynamite, and Stephen Colbert's AmeriCone Dream?
+  GT: ben jerrys; ben and jerrys; ben and jerry s homemade; ben jerry s free cone day; ben and jerry s; free cone day; taste linsanity; ben jerry s homemade inc; b...
+  Pred: Ben & Jerry's
+[triviaqa] #287 | EM=YES | F1=1.00 | Contain=YES | running EM=182/287 (63.41%) | running F1=0.72
+  Q: It is said that you can't sink in this sea, what sea is it?
+  GT: lake asphaltites; marawa samandar; death sea; sea of lot; sea of arabah; sea of zoar; sea of arava; asphaltic pool; dead sea jordan; dead sea; asphaltic lake...
+  Pred: The Dead Sea
+[triviaqa] #288 | EM=YES | F1=1.00 | Contain=YES | running EM=183/288 (63.54%) | running F1=0.72
+  Q: Name the British heavyweight Boxing champion who held the title between 1959 and 1969?
+  GT: henry cooper boxer; cooper henry; henry cooper
+  Pred: Henry Cooper
+[triviaqa] #289 | EM=YES | F1=1.00 | Contain=YES | running EM=184/289 (63.67%) | running F1=0.73
+  Q: Approximately what percentage of an incandescent light bulb's energy is wasted as heat?
+  GT: ninety; 90
+  Pred: 90%
+[triviaqa] #290 | EM=NO | F1=0.04 | Contain=YES | running EM=184/290 (63.45%) | running F1=0.72
+  Q: Which wild life quiz show was hosted by Henry Kelly
+  GT: monkey business song; monkey business disambiguation; monkey business film; monkey business
+  Pred: No Match
+[triviaqa] #291 | EM=YES | F1=1.00 | Contain=YES | running EM=185/291 (63.57%) | running F1=0.72
+  Q: What was the first name of the Kray twins' mother
+  GT: violet; violet song; violet album; violet film; violet character; violet lp; violet single; violets; violet disambiguation
+  Pred: Violet
+[triviaqa] #292 | EM=NO | F1=0.00 | Contain=NO | running EM=185/292 (63.36%) | running F1=0.72
+  Q: In 1968 what became the longest course used for the British Open golf championship
+  GT: carnoustie scotland; carnoustie angus; royal burgh of carnoustie; carnoustie town; carnoustie; woodlands primary school carnoustie
+  Pred: No Match
+[triviaqa] #293 | EM=YES | F1=1.00 | Contain=YES | running EM=186/293 (63.48%) | running F1=0.72
+  Q: How many points on the maple leaf that plays such a significant role in the flag of our neighbor to the north, Canada?
+  GT: eleven; 11
+  Pred: 11
+[triviaqa] #294 | EM=YES | F1=1.00 | Contain=YES | running EM=187/294 (63.61%) | running F1=0.72
+  Q: Which French racecourse hosts the 'Prix de l'Arc de Triomphe?
+  GT: longchamps; longchamp disambiguation; longchamp
+  Pred: Longchamp
+[triviaqa] #295 | EM=NO | F1=0.00 | Contain=YES | running EM=187/295 (63.39%) | running F1=0.72
+  Q: Rickets is caused by a lack of what essential element?
+  GT: calcium ion; calcium supplement; factor 4; calcium supplements; element 20; kalcium; ca 2; factor iv; calcium supplementation; h and k lines; calcium ions; c...
+  Pred: Vitamin D
+[triviaqa] #296 | EM=YES | F1=1.00 | Contain=YES | running EM=188/296 (63.51%) | running F1=0.72
+  Q: Eric Arthur Blair, born 25 June, 1903, was the birth name of what famed English author, who penned such works as The Road To Wiggan Pier and Down and Out in ...
+  GT: eric blair; g orwell; eric arthur blair; geoge orwell; e blair; george orwell; arthur blair; orwell day; p s burton; orwell george; george eric blair orwell
+  Pred: George Orwell
+[triviaqa] #297 | EM=YES | F1=1.00 | Contain=YES | running EM=189/297 (63.64%) | running F1=0.72
+  Q: Ascorbic acid is usually known as what?
+  GT: kyselina askorbova; vitamin c; scorbacid; cebicure; vitamin c foundation; vitacimin; cescorbat; ciamin; cebion; cecon; ascorbicap; vitamisin; list of foods c...
+  Pred: Vitamin C
+[triviaqa] #298 | EM=YES | F1=1.00 | Contain=YES | running EM=190/298 (63.76%) | running F1=0.72
+  Q: From which country does paella come
+  GT: el reino de españa; iso 3166 1 es; kingdom of spains; reino de espana; regne d espanha; espagna; mountains of spain; kingdom of spain; name of spain; etymolo...
+  Pred: Spain
+[triviaqa] #299 | EM=YES | F1=1.00 | Contain=YES | running EM=191/299 (63.88%) | running F1=0.72
+  Q: The last of the three-age system, what age followed the Bronze Age?
+  GT: first iron age; iron age ii; iron age iii; african iron age; early iron age; middle iron age; iron age japan; celto roman iron age; late iron age; european i...
+  Pred: Iron Age
+[triviaqa] #300 | EM=YES | F1=1.00 | Contain=YES | running EM=192/300 (64.00%) | running F1=0.73
+  Q: Mary Jo Kopechne died on July 19, 1969, following an accident in a car driven by whom?
+  GT: teddy kennedy; lion of senate; sir edward kennedy; edward moore kennedy; ted kennedy draft 1; edward kennedy; edward m 22ted 22 kennedy; edward moore 22ted 2...
+  Pred: Edward Kennedy
+[triviaqa] #301 | EM=YES | F1=1.00 | Contain=YES | running EM=193/301 (64.12%) | running F1=0.73
+  Q: By congressional resolution, Sam Wilson, of Troy, New York, a meat supplier for the Army during the War of 1812,is recognized as the progenitor of what famou...
+  GT: i want you for u s army; uncle sam wants you recruitment poster; baba sam; uncle sam wants you; uncle sam
+  Pred: Uncle Sam
+[triviaqa] #302 | EM=YES | F1=1.00 | Contain=YES | running EM=194/302 (64.24%) | running F1=0.73
+  Q: Published on Feb 21, 1848, which two authors were responsible for the Communist Manifesto?
+  GT: karl marx and friedrich engels
+  Pred: Karl Marx and Friedrich Engels
+[triviaqa] #303 | EM=NO | F1=0.00 | Contain=NO | running EM=194/303 (64.03%) | running F1=0.73
+  Q: Smith is the most common English surname, what's the Japanese version
+  GT: szuki; suzuki; suzuki motor; suzuki rc100; suzuki motor corporation; formula suzuki; szki; suzuki cars; suzuki motors; suzki
+  Pred: Shuttsu or Shuttsu no ie
+[triviaqa] #304 | EM=NO | F1=0.29 | Contain=YES | running EM=194/304 (63.82%) | running F1=0.72
+  Q: In which country did the carrot originate
+  GT: stan; afghanistan 1911 encyclopedia; afghansitan; graveyard of empires; afganistan; dowlat e eslami ye afghanestan; afğānistān; afgahanistan; afghanastan; af...
+  Pred: Afghanistan, Pakistan, and Iran (the Iranian Plateau)
+[triviaqa] #305 | EM=YES | F1=1.00 | Contain=YES | running EM=195/305 (63.93%) | running F1=0.72
+  Q: Gene Hackman played the sheriff of Big Whiskey and received an Oscar in which 1992 film?
+  GT: unforgiven film; william munny; unforgiven; will munny; unforgiven 1992 film
+  Pred: Unforgiven
+[triviaqa] #306 | EM=NO | F1=0.00 | Contain=YES | running EM=195/306 (63.73%) | running F1=0.72
+  Q: What sporting surface is 78 feet long and 27 feet wide for singles matches?
+  GT: court tennis; tennis carpet; back court; advantage court; tennis surfaces; tennis court; tennis surface; deuce court; baseline tennis; indoor courts; tennis ...
+  Pred: 78 feet long and 27 feet wide
+[triviaqa] #307 | EM=YES | F1=1.00 | Contain=YES | running EM=196/307 (63.84%) | running F1=0.72
+  Q: "Which famous children's novel begins with the words ""The mole had been working very hard all morning, spring cleaning his little home"""
+  GT: wild wood novel; badger wind in willows; ratty water vole; wind in willow; wind in willows musical; mole wind in willows; wind in willows; wind in willows 20...
+  Pred: The Wind in the Willows
+[triviaqa] #308 | EM=NO | F1=0.01 | Contain=YES | running EM=196/308 (63.64%) | running F1=0.72
+  Q: Which newsreader famously sat on a Lesbian when the Six O Clock News studio was invaded by protestors in the 1980s
+  GT: nick witchell; nicholas newton henshall witchell; nicholas witchell
+  Pred: No Match
+[triviaqa] #309 | EM=YES | F1=1.00 | Contain=YES | running EM=197/309 (63.75%) | running F1=0.72
+  Q: Can you name the singer of the title track in '1995 - GoldenEye'?
+  GT: tinna turner; tina turner s; tina turner; tina tuner; anna bullock; annie mae bullock; anna mae bullock
+  Pred: Tina Turner
+[triviaqa] #310 | EM=NO | F1=0.40 | Contain=YES | running EM=197/310 (63.55%) | running F1=0.72
+  Q: What successful, no-frills airline is headquartered at Love Field in Dallas, and is one of the few that doesn't charge a baggage handling fee?
+  GT: southwest airlines cargo; southwestair; southwest airlines vacations; southwestvacations com; southwest airlines flight 519; wnco com; southwest airtran merg...
+  Pred: No Match
+[triviaqa] #311 | EM=YES | F1=1.00 | Contain=YES | running EM=198/311 (63.67%) | running F1=0.72
+  Q: On July 24, 1911, future US. Senator (R, Connecticut) Hiram Bingham III “discovered” what Peruvian city?
+  GT: manchu pichu; machu pikchu; machupicchu; 2010 machu picchu floods; machu picchu; machu piccu; macchu picchu; machu; machu pichu; macchu pichu; macchu piccu; ...
+  Pred: Machu Picchu
+[triviaqa] #312 | EM=YES | F1=1.00 | Contain=YES | running EM=199/312 (63.78%) | running F1=0.72
+  Q: Can you name the singer of the title track for '1971 - Diamonds Are Forever'?
+  GT: burly chassis; love album shirley bassey album; dame shirley bassey; dame shirley bassey dbe; shirley veronica bassey; shirley bassie; shirley bassett; shirl...
+  Pred: Shirley Bassey
+[triviaqa] #313 | EM=NO | F1=0.03 | Contain=YES | running EM=199/313 (63.58%) | running F1=0.72
+  Q: In addition to hosting the Academy Awards, what stand up comic took over for Craig Kilborn behind the desk of The Daily Show?
+  GT: jon steward; stew beef; jon stewart; jonathan liebowitz; jon stewert; tracey stewart; john leibowitz; jonathan stuart liebowitz; jon stewart filmography; jon...
+  Pred: No Match
+[triviaqa] #314 | EM=YES | F1=1.00 | Contain=YES | running EM=200/314 (63.69%) | running F1=0.72
+  Q: Where was Dick Turpin executed by hanging?
+  GT: york yorkshire; eoferwic; park grove primary school; park grove school; weather in york; park grove 1895; eoforwic; county borough of york; york uk; un locod...
+  Pred: York
+[triviaqa] #315 | EM=YES | F1=1.00 | Contain=YES | running EM=201/315 (63.81%) | running F1=0.72
+  Q: What have you lost if you are suffering from anosmia
+  GT: osmesis; olfactories; olfactics; olfaction; olfacception; olfacoception; olfactory sense; sense of smell; olfactory; classification of smells; olefactory; ol...
+  Pred: the sense of smell
+[triviaqa] #316 | EM=NO | F1=0.50 | Contain=YES | running EM=201/316 (63.61%) | running F1=0.72
+  Q: In 2001, Dennis Tito paid a reported $20 million to be the first tourist to go where?
+  GT: geometrical space; physical space; three space; spacial; space astronomy; space; space physics; space philosophy
+  Pred: International Space Station
+[triviaqa] #317 | EM=NO | F1=0.04 | Contain=YES | running EM=201/317 (63.41%) | running F1=0.72
+  Q: The capital of North Carolina was named for what famed 17th century English explorer and lover of tobacco?
+  GT: sir walter ralegh; walter ralegh; walter rawleigh; walter rawley; sir raleigh; sir walter ralegh s; walter ralagh; lord walter raleigh; sir walter raleigh; w...
+  Pred: No Match
+[triviaqa] #318 | EM=YES | F1=1.00 | Contain=YES | running EM=202/318 (63.52%) | running F1=0.72
+  Q: What was the 42nd state to join the Union on Nov 11, 1889?
+  GT: washington amtrak station; washington cta disambiguation; washington usa; washington cta; washington disambiguation; washington united states disambiguation;...
+  Pred: Washington
+[triviaqa] #319 | EM=YES | F1=1.00 | Contain=YES | running EM=203/319 (63.64%) | running F1=0.72
+  Q: Which US city had the first subway system, being opened in 1895?
+  GT: bofton; religion in boston; weather in boston; demographics of boston; boston s; hub of universe; massachusetts boston; boston massachussettes; boston usa; c...
+  Pred: Boston
+[triviaqa] #320 | EM=YES | F1=1.00 | Contain=YES | running EM=204/320 (63.75%) | running F1=0.72
+  Q: According to Smokey The Bear, Remember... only you can what?
+  GT: prevent forest fires
+  Pred: prevent forest fires
+[triviaqa] #321 | EM=YES | F1=1.00 | Contain=YES | running EM=205/321 (63.86%) | running F1=0.72
+  Q: What is the state capital of Alabama
+  GT: montgomery; montgomery disambiguation; montgomerie
+  Pred: Montgomery
+[triviaqa] #322 | EM=YES | F1=1.00 | Contain=YES | running EM=206/322 (63.98%) | running F1=0.72
+  Q: What company made headlines last week by claiming to own a trademark on the word "footlong"?
+  GT: subwya; subway disambiguation; subways; subway
+  Pred: Subway
+[triviaqa] #323 | EM=YES | F1=1.00 | Contain=YES | running EM=207/323 (64.09%) | running F1=0.72
+  Q: Founded in 1900, in what sport is the Davis Cup played for?
+  GT: professional tennis player; break point; big tennis; set point tennis; lawn tennis; match tiebreak; 🎾; game point; tennis player; tenniz; tenis; tennis; matc...
+  Pred: tennis
+[triviaqa] #324 | EM=NO | F1=0.13 | Contain=YES | running EM=207/324 (63.89%) | running F1=0.72
+  Q: Discovery, Gillyflower and Rome Beauty are types of which fruit
+  GT: apple fruit; سێو; malus pumila; apple trees; 🍏; malus domesticus; apple blossom; apples and teachers; dried apple; aplle; apple; malus communis; apple tree; ...
+  Pred: No Match
+[triviaqa] #325 | EM=YES | F1=1.00 | Contain=YES | running EM=208/325 (64.00%) | running F1=0.72
+  Q: Kirkland Signature is the house brand of what retail giant?
+  GT: costco travel; kirkland signature; costco; costco connection; costco com; costco wholesale club; costco wholesale; club price; costco inc; costco cash; costc...
+  Pred: Costco
+[triviaqa] #326 | EM=YES | F1=1.00 | Contain=YES | running EM=209/326 (64.11%) | running F1=0.72
+  Q: What Missouri town calls itself the “Live Music Show Capital of the World”?
+  GT: branson disambiguation; branson
+  Pred: Branson
+[triviaqa] #327 | EM=NO | F1=0.67 | Contain=YES | running EM=209/327 (63.91%) | running F1=0.72
+  Q: In order to secure the help of the Wizard, whose broom must Dorothy steal in the Wizard of Oz?
+  GT: wicked witch of west; witch of west; wicked witch; wizard of oz wicked witch of west
+  Pred: The Wicked Witch's broomstick
+[triviaqa] #328 | EM=NO | F1=0.00 | Contain=NO | running EM=209/328 (63.72%) | running F1=0.72
+  Q: Who played the role of George Carter in The Sweeney?
+  GT: denis waterman; dennis waterman
+  Pred: Ben Drew
+[triviaqa] #329 | EM=YES | F1=1.00 | Contain=YES | running EM=210/329 (63.83%) | running F1=0.72
+  Q: According to the nursery rhyme, who lives on Drury Lane?
+  GT: muffin man
+  Pred: The Muffin Man
+[triviaqa] #330 | EM=NO | F1=0.06 | Contain=NO | running EM=210/330 (63.64%) | running F1=0.72
+  Q: Although now pretty much a bit player, Porky Pig's only known girlfriend is who?
+  GT: petunia pig
+  Pred: No Match
+[triviaqa] #331 | EM=YES | F1=1.00 | Contain=YES | running EM=211/331 (63.75%) | running F1=0.72
+  Q: What company encourages you to "Think Outside the Bun"?
+  GT: taco bel; taco bell; taco bell corporation; cheesy beefy melt; taco hut; taco bell express; taco bell home originals; taco hell; frutista freeze; tacobellene...
+  Pred: Taco Bell
+[triviaqa] #332 | EM=NO | F1=0.67 | Contain=YES | running EM=211/332 (63.55%) | running F1=0.72
+  Q: According to the proverb, what does a stitch in time save?
+  GT: nine; 9
+  Pred: nine stitches
+[triviaqa] #333 | EM=YES | F1=1.00 | Contain=YES | running EM=212/333 (63.66%) | running F1=0.72
+  Q: In which year in the 20's did the General Strike occur
+  GT: one thousand nine hundred and twenty six; 1926
+  Pred: 1926
+[triviaqa] #334 | EM=NO | F1=0.89 | Contain=YES | running EM=212/334 (63.47%) | running F1=0.72
+  Q: Where sitting on his suitcase was Paddington bear found ?
+  GT: paddington bishop s road tube station; paddington rail station; london paddington railway station; london paddington; paddington underground station; london ...
+  Pred: Paddington Railway Station in London
+[triviaqa] #335 | EM=YES | F1=1.00 | Contain=YES | running EM=213/335 (63.58%) | running F1=0.72
+  Q: Author Alex Haley, born on Aug 11, 1921, wrote what epic story of his family origins, later to be made a rather popular mini-series?
+  GT: roots saga of american family; roots book; roots novel
+  Pred: Roots: The Saga of an American Family
+[triviaqa] #336 | EM=NO | F1=0.80 | Contain=YES | running EM=213/336 (63.39%) | running F1=0.72
+  Q: A “slim jim” is a type of pick used to open what type of lock without a key?
+  GT: door switch; sports car door; car door; automobile door; vehicle door; fifth door; door vehicle; door automobile; self closing door
+  Pred: car door lock
+[triviaqa] #337 | EM=YES | F1=1.00 | Contain=YES | running EM=214/337 (63.50%) | running F1=0.72
+  Q: August 14, 1951 saw the death of the man on whom the movie Citizen Kane was based. Who was it?
+  GT: william randolph hurst; william randolph hearst; bill hearst; w r hearst; randolph hearst; beverly house; william randolph hear t; william r hearst; william ...
+  Pred: William Randolph Hearst
+[triviaqa] #338 | EM=YES | F1=1.00 | Contain=YES | running EM=215/338 (63.61%) | running F1=0.73
+  Q: What kind of flowers was the gunman holding when he shot Dirty Den in Eastenders
+  GT: jonquils; affodell; narcissus plant; narcissi; daffodils; jonquil genus; narcissus flower; daphodyl; affodil; daffadown dilly; daffodills; narcissus herb; da...
+  Pred: Daffodils
+[triviaqa] #339 | EM=NO | F1=0.07 | Contain=YES | running EM=215/339 (63.42%) | running F1=0.72
+  Q: Who flew a kite in a storm on June 15, 1750, proving that lightning was electrical?
+  GT: tradesman of philidelphia; abigail twitterfield; busybody; franklinic; abigail afterwit; benjamin ben franklin; ben franklin; sidi mehemet ibrahim; betty dil...
+  Pred: No Match
+[triviaqa] #340 | EM=YES | F1=1.00 | Contain=YES | running EM=216/340 (63.53%) | running F1=0.72
+  Q: On August 28, 1963, who stood on the steps of Lincoln Memorial and famously stated "I have a dream"?
+  GT: dr martin luther king jr; martin luther king junior; m l king; m l k; rev dr martin luther king jr; doctor martin luther king; dr martin luther king; martin ...
+  Pred: Martin Luther King Jr.
+[triviaqa] #341 | EM=YES | F1=1.00 | Contain=YES | running EM=217/341 (63.64%) | running F1=0.73
+  Q: What was the name of the compere on the TV show 'Take Your Pick'?
+  GT: michael miles
+  Pred: Michael Miles
+[triviaqa] #342 | EM=YES | F1=1.00 | Contain=YES | running EM=218/342 (63.74%) | running F1=0.73
+  Q: At which English racecourse would you see the 'Hennessy Gold Cup'?
+  GT: newbury; newbury disambiguation
+  Pred: Newbury
+[triviaqa] #343 | EM=YES | F1=1.00 | Contain=YES | running EM=219/343 (63.85%) | running F1=0.73
+  Q: "In the film 'Casablanca', Humphrey Bogart said ""Play it again, Sam"". True or False?"
+  GT: falsehood; false disambiguation; false
+  Pred: False
+[triviaqa] #344 | EM=YES | F1=1.00 | Contain=YES | running EM=220/344 (63.95%) | running F1=0.73
+  Q: What speaker component is used to produce the highest audio frequencies, usually between 2,000HZ and 20,000HZ?
+  GT: tweeter; tweeters; piezo tweeter; piezoelectric speakers
+  Pred: Tweeter
+[triviaqa] #345 | EM=NO | F1=0.17 | Contain=NO | running EM=220/345 (63.77%) | running F1=0.73
+  Q: Based on market cap, who was declared the top technology company this week, stopping Microsoft's nearly 20 year run on top?
+  GT: apple fruit; سێو; malus pumila; apple trees; 🍏; malus domesticus; apple blossom; apples and teachers; dried apple; aplle; apple; malus communis; apple tree; ...
+  Pred: No information is provided in the document about a company surpassing Microsoft's nearly 20-year run as the top technology company.
+[triviaqa] #346 | EM=YES | F1=1.00 | Contain=YES | running EM=221/346 (63.87%) | running F1=0.73
+  Q: Which Sweets were advertised with the slogan ' Taste the Rainbow'?
+  GT: skittles disambiguation; skittles; skittle
+  Pred: Skittles
+[triviaqa] #347 | EM=NO | F1=0.00 | Contain=YES | running EM=221/347 (63.69%) | running F1=0.72
+  Q: What is the name of the wooden panelled lining applied to a room
+  GT: paneled; wood paneling; wainscot; paneling; panellings; waynescoating; wood panelling; wainscots; panelled; wooden screens; panelings; boiserie; wainscoted; ...
+  Pred: Interior Lining
+[triviaqa] #348 | EM=YES | F1=1.00 | Contain=YES | running EM=222/348 (63.79%) | running F1=0.73
+  Q: What year were all these comedians born: Harry Enfield, Eddie Murphy and Rory Bremner?
+  GT: one thousand nine hundred and sixty one; 1961
+  Pred: 1961
+[triviaqa] #349 | EM=YES | F1=1.00 | Contain=YES | running EM=223/349 (63.90%) | running F1=0.73
+  Q: Phobos and Deimos are the only two moons of what planet?
+  GT: fourth planet; mars; oblate mars; mars surface features; 4th planet; marte planet; 2003 opposition of mars; mars opposition; hydrology of mars; planet mars; ...
+  Pred: Mars
+[triviaqa] #350 | EM=YES | F1=1.00 | Contain=YES | running EM=224/350 (64.00%) | running F1=0.73
+  Q: The rivers Trent and Ouse flow into which estuary?
+  GT: river humber; humber england; abus river; humber river england; humber; humber estuary
+  Pred: Humber
+[triviaqa] #351 | EM=YES | F1=1.00 | Contain=YES | running EM=225/351 (64.10%) | running F1=0.73
+  Q: The Northern Line is represented by which colour on the map of the Underground?
+  GT: blackishly; blackly; black color; 000000; black colour; ultimately dark; blackeness; blackest; color black; blackishness; black is not color; 0 0 0; black; r...
+  Pred: black
+[triviaqa] #352 | EM=YES | F1=1.00 | Contain=YES | running EM=226/352 (64.20%) | running F1=0.73
+  Q: What tiny peoples tied up Gulliver while he was asleep?
+  GT: endian war; blefuscu; lilliputian; lilliput and blefuscu; lilliput blefuscu; lilliputians
+  Pred: Lilliputians
+[triviaqa] #353 | EM=YES | F1=1.00 | Contain=YES | running EM=227/353 (64.31%) | running F1=0.73
+  Q: Satisfactellent, Nougatocity, Hungerectomy, Substantialicious and Peanutopolis were all used to advertise what product?
+  GT: snickers almond bar; snickers song; marathon brand; snickers bar; substantialiscious; snicker s; snickers; marathon snickers; snickers marathon
+  Pred: Snickers
+[triviaqa] #354 | EM=NO | F1=0.00 | Contain=NO | running EM=227/354 (64.12%) | running F1=0.73
+  Q: Whose beagle buddy is 'Snoopy'?
+  GT: woodstock music festival; woodstock movie; woodstock music and art fair; woodstock 1969; woodstock art festival; woodstock music and arts fair; woodstock mus...
+  Pred: Charlie Brown
+[triviaqa] #355 | EM=YES | F1=1.00 | Contain=YES | running EM=228/355 (64.23%) | running F1=0.73
+  Q: What is written on the cake that Alice finds once she's entered the rabbit hole?
+  GT: eat me disambiguation; eat me
+  Pred: EAT ME
+[triviaqa] #356 | EM=YES | F1=1.00 | Contain=YES | running EM=229/356 (64.33%) | running F1=0.73
+  Q: Whose compositions included 'The Firebird' and 'Petrushka'?
+  GT: strawinsky; igor fedorovich stravinsky; stravinskij; igor fyodorovich stravinskij; stravinsky igor fedorovich; stravinsky; igor strawinsky; strawinski; igor ...
+  Pred: Igor Stravinsky
+[triviaqa] #357 | EM=YES | F1=1.00 | Contain=YES | running EM=230/357 (64.43%) | running F1=0.73
+  Q: Responsible for such novels as Burmese Days, Keep the Aspidistra Flying, and Coming Up for Air, British author Eric Blair was popularly known as whom?
+  GT: eric blair; g orwell; eric arthur blair; geoge orwell; e blair; george orwell; arthur blair; orwell day; p s burton; orwell george; george eric blair orwell
+  Pred: George Orwell
+[triviaqa] #358 | EM=YES | F1=1.00 | Contain=YES | running EM=231/358 (64.53%) | running F1=0.73
+  Q: What is 'The Old Lady of Threadneedle Street'?
+  GT: national bank of united kingdom; national bank of guernsey; national bank of gibraltar; national bank of jersey; old lady of threadneedle street; uk central ...
+  Pred: The Bank of England
+[triviaqa] #359 | EM=YES | F1=1.00 | Contain=YES | running EM=232/359 (64.62%) | running F1=0.73
+  Q: According to Samuel Beckett, who are Vladimir and Estragon waiting for?
+  GT: godot; godot disambiguation
+  Pred: Godot
+[triviaqa] #360 | EM=YES | F1=1.00 | Contain=YES | running EM=233/360 (64.72%) | running F1=0.73
+  Q: Proclaiming himself "the luckiest man on the face of the earth", what baseball legend announced his retirement from the New York Yankees on July 4, 1939, fol...
+  GT: buster gehrig; henry louis lou gehrig; biscuit pants; luckiest man on face of earth; henry louis buster gehrig; lou buster gehrig; 22lou 22 gehrig; gehrig; l...
+  Pred: Lou Gehrig
+[triviaqa] #361 | EM=YES | F1=1.00 | Contain=YES | running EM=234/361 (64.82%) | running F1=0.73
+  Q: Which letter appears in a small circle after a trade-name to prove that the trade name is a registered trademark
+  GT: ʀ letter; ʀ; 🅁; ｒ; 🅡; 🄡; vox canina; r letter; ar letter; 🆁; r; vōx canīna; ⒭
+  Pred: R
+[triviaqa] #362 | EM=NO | F1=0.02 | Contain=YES | running EM=234/362 (64.64%) | running F1=0.73
+  Q: October 27, 1858 saw the birth of what totally bad assed US president, the 26th, who spent time as a North Dakota rancher before becoming assistant Secretary...
+  GT: t ros; cowboy president; theodore roosavelt; trust buster; president theodore roosevelt; teddy roosvelt; teddy rosevelt; t roosevelt; roosevelt theodore; fed...
+  Pred: No Match
+[triviaqa] #363 | EM=NO | F1=0.15 | Contain=YES | running EM=234/363 (64.46%) | running F1=0.73
+  Q: Which US president, who had a birthday on August 19, was born in Hope, Arkansas?
+  GT: william jefferson blythe iv; william clinton; clinton bill; william jefferson blythe iii; bill blythe iv; willam jefferson blythe iii; president clinton; bil...
+  Pred: No Match
+[triviaqa] #364 | EM=YES | F1=1.00 | Contain=YES | running EM=235/364 (64.56%) | running F1=0.73
+  Q: What was the name of the character played by Bonnie Langford in Just William
+  GT: william brown fictional boy; william brown series; william again; just william book series; william fourth story collection; violet elizabeth bott
+  Pred: Violet Elizabeth Bott
+[triviaqa] #365 | EM=NO | F1=0.00 | Contain=YES | running EM=235/365 (64.38%) | running F1=0.73
+  Q: Breugel; Van Dyck and Rubens were all citizens of which country?
+  GT: cockpit of europe; koninkrijk belgie; königreich belgien; belgië; begium; konigreich belgien; belgie; quebec of europe; belgio; iso 3166 1 be; administrative...
+  Pred: The Netherlands
+[triviaqa] #366 | EM=YES | F1=1.00 | Contain=YES | running EM=236/366 (64.48%) | running F1=0.73
+  Q: What 1996 film was about a group of drug taking misfits in Edinburgh
+  GT: trainspotting; trainspotting disambiguation
+  Pred: Trainspotting
+[triviaqa] #367 | EM=YES | F1=1.00 | Contain=YES | running EM=237/367 (64.58%) | running F1=0.73
+  Q: What boxer was stripped of his heavyweight boxing titles when he refused his US army induction in April, 1967?
+  GT: muhammud ali; louisville lip; ali muhammad; float like butter fly sting like bee; khalilah belinda ali; i am greatest; float like butterfly sting like bee; c...
+  Pred: Muhammad Ali
+[triviaqa] #368 | EM=YES | F1=1.00 | Contain=YES | running EM=238/368 (64.67%) | running F1=0.73
+  Q: In the classic fairy tale, what did Jack (of Jack and the Beanstalk fame) trade for the magic beans?
+  GT: cows; cow disambiguation; cow; c o w
+  Pred: a cow
+[triviaqa] #369 | EM=NO | F1=0.00 | Contain=YES | running EM=238/369 (64.50%) | running F1=0.73
+  Q: First proposed by H.G. Wells in a 1903 story, what military staple saw its first action during the Battle of the Somme, September 1916?
+  GT: national review; national weekly; tank; national review online; nrodt
+  Pred: tanks
+[triviaqa] #370 | EM=YES | F1=1.00 | Contain=YES | running EM=239/370 (64.59%) | running F1=0.73
+  Q: Two all beef patties, special sauce, lettuce, cheese, pickles, onions on a sesame seed bun describes what?
+  GT: maharaja mac; two all beef patties special sauce lettuce cheese pickles onions on sesame seed bun; big mac sauce; baby mac; monster mac; gotbot com; big mac®...
+  Pred: Big Mac
+[triviaqa] #371 | EM=NO | F1=0.00 | Contain=YES | running EM=239/371 (64.42%) | running F1=0.73
+  Q: What does the DSM-IV define as: A pervasive pattern of excessive emotionality and attention seeking, beginning by early adulthood and present in a variety of...
+  GT: histrionic personality; histrionia; histrionic personality disorder; hysterical personality disorder
+  Pred: 1. Is uncomfortable in situations in which he or she is not the center of attention, 2. Interaction with others is often characterized by inappropriate sexually seductive or provocative behavior, 3...
+[triviaqa] #372 | EM=YES | F1=1.00 | Contain=YES | running EM=240/372 (64.52%) | running F1=0.73
+  Q: What is the name of the cookie recipe printed on the back of each bag of Nestle "semi-sweet chocolate morsels"?
+  GT: toll house cookies; chocolate chip cookie recipes; tollhouse cookie; chocolate chip cookies; tollhouse cookies; toll house cookie; nestlé toll house; chocola...
+  Pred: Toll House Cookies
+[triviaqa] #373 | EM=YES | F1=1.00 | Contain=YES | running EM=241/373 (64.61%) | running F1=0.73
+  Q: Also known as honey wine, what is the name of the alcoholic beverage that is made of honey and water, properly fermented with yeast, of course?
+  GT: honeyed wine; mjöd; metheglin; mead; mjod; braggot; honey wine; mjød; melomels; cyser; meadhing; pitarrilla; honey mead; rhodomel; metheglins; honeymead; hyd...
+  Pred: Mead
+[triviaqa] #374 | EM=NO | F1=0.00 | Contain=YES | running EM=241/374 (64.44%) | running F1=0.73
+  Q: What pattern would be on material described as Tattersall
+  GT: checked; check; check song; checking; check disambiguation; checkk; checks
+  Pred: a pattern of squares formed by colored crossbars on a solid-color, usually light background
+[triviaqa] #375 | EM=YES | F1=1.00 | Contain=YES | running EM=242/375 (64.53%) | running F1=0.73
+  Q: To the tune of almost 46 million dollars (in then dollars), what noted philanthropist funded the construction of 1687 public libraries between 1886 and 1923?
+  GT: andrew carnagie; andrew carnegie; carnagie andrew; carnegie
+  Pred: Andrew Carnegie
+[triviaqa] #376 | EM=YES | F1=1.00 | Contain=YES | running EM=243/376 (64.63%) | running F1=0.73
+  Q: Which former Bond star played the part of Mr. Rochester in a 1983 TV mini series of Jane Eyre?
+  GT: tim dalton; timothy peter dalton; timothy dalton
+  Pred: Timothy Dalton
+[triviaqa] #377 | EM=NO | F1=0.57 | Contain=YES | running EM=243/377 (64.46%) | running F1=0.73
+  Q: A speechwriter for both Ford and Nixon, before becoming actor and comedian, who won a Emmy award as host of a game show in which you could win $5000 of his o...
+  GT: win ben steins money; win ben stein s money
+  Pred: Ben Stein
+[triviaqa] #378 | EM=YES | F1=1.00 | Contain=YES | running EM=244/378 (64.55%) | running F1=0.73
+  Q: What is the smallest Canadian province
+  GT: p e i; île du prince édouard; prince edward island canada; ile st jean; epekwitk; pince edward island; province of prince edward island; colony of prince edw...
+  Pred: Prince Edward Island
+[triviaqa] #379 | EM=NO | F1=0.00 | Contain=YES | running EM=244/379 (64.38%) | running F1=0.73
+  Q: What is the Human body's hardest bone?
+  GT: jaw; jawbones; jaw diseases; gnathic; jaw suspension; jaw bones; human jaw; jawbone; jaw bone
+  Pred: mandible
+[triviaqa] #380 | EM=YES | F1=1.00 | Contain=YES | running EM=245/380 (64.47%) | running F1=0.73
+  Q: How was Monday October 19, 1987 known in the world of finance
+  GT: list of black mondays; black monday; black monday 2008
+  Pred: Black Monday
+[triviaqa] #381 | EM=NO | F1=0.23 | Contain=YES | running EM=245/381 (64.30%) | running F1=0.73
+  Q: August 17, 1908 saw the opening of what public farmers market, the longest continually running public farmers market in the US?
+  GT: frank goodwin; pike market seattle washington; joe desimone; pike place market historic district; pike s place; economy market; pike place market; pike place...
+  Pred: No Match
+[triviaqa] #382 | EM=NO | F1=0.00 | Contain=NO | running EM=245/382 (64.14%) | running F1=0.72
+  Q: From what is 'Banana Oil' produced?
+  GT: dssn; low sulfur coal; pitcoal; coal pulverization; fuel industry; coal industry; coking coal; coal; steam coal; coal fired; liquid coal; pit coal; coalizati...
+  Pred: No Match
+[triviaqa] #383 | EM=YES | F1=1.00 | Contain=YES | running EM=246/383 (64.23%) | running F1=0.72
+  Q: On Sept 23, 1846 three astronomers Urbain Le Verrier, John Couch Adams, and Johann Galle co-discovered which one of the current planets?
+  GT: planet neptune; ♆; neptune s weather; neptune; neptune s; scooter neptune; astronomy neptune; planet exterior to uranus; neptunus planet; neptune planet; eig...
+  Pred: Neptune
+[triviaqa] #384 | EM=YES | F1=1.00 | Contain=YES | running EM=247/384 (64.32%) | running F1=0.73
+  Q: What cat food “tastes so good, cats ask for it by name”?
+  GT: meow mix; meowmix; meow mix theme; meow mix cat; singing cat; meow mix cat food; alley cat cat food
+  Pred: Meow Mix
+[triviaqa] #385 | EM=YES | F1=1.00 | Contain=YES | running EM=248/385 (64.42%) | running F1=0.73
+  Q: Who played 'Robert Langdon' in 'The Da Vinci Code'?
+  GT: thomas hanks; hanks tom; sandra hanks benoiton; chet hanks; samantha lewes; thomas jeffrey hanks; tom hank; chet haze; tom hanks; tam honks
+  Pred: Tom Hanks
+[triviaqa] #386 | EM=YES | F1=1.00 | Contain=YES | running EM=249/386 (64.51%) | running F1=0.73
+  Q: Beethoven wrote only one opera, can you name it?
+  GT: leonore no 2; leonore; leonore ii; leonore no 3; fidelio opus 72c beethoven; fidelio; leonora overtures; leonore overture no 1; leonore overture no 3; leonor...
+  Pred: Fidelio
+[triviaqa] #387 | EM=NO | F1=0.13 | Contain=YES | running EM=249/387 (64.34%) | running F1=0.72
+  Q: A rabbit punch is a blow to what part of the body?
+  GT: neck; human neck; necke; collum anatomy; nuchal
+  Pred: the back of the opponent's head, the bottom part of the skull, or to the back of the neck
+[triviaqa] #388 | EM=YES | F1=1.00 | Contain=YES | running EM=250/388 (64.43%) | running F1=0.73
+  Q: What is the physics term for mass times velocity?
+  GT: law of conservation of linear momentum; momentum physics; potential momentum; momentum; kinetic momentum; p mv; conservation of impulse; conservation of mome...
+  Pred: momentum
+[triviaqa] #389 | EM=NO | F1=0.62 | Contain=YES | running EM=250/389 (64.27%) | running F1=0.73
+  Q: Complete the proverb: All work and no play...?
+  GT: makes jack dull boy
+  Pred: All work and no play makes Jack a dull boy.
+[triviaqa] #390 | EM=YES | F1=1.00 | Contain=YES | running EM=251/390 (64.36%) | running F1=0.73
+  Q: What is the usual colour of an aircrafts Black Box?
+  GT: orange; orange disambiguation; orange album; orangeishly; orangishly; orangeishness; oranfe; orange film; orangishness
+  Pred: orange
+[triviaqa] #391 | EM=NO | F1=0.00 | Contain=YES | running EM=251/391 (64.19%) | running F1=0.72
+  Q: In the film Christine, who or what was Christine
+  GT: automobilism; automobil; cars; passenger vehicles; autos; environmental impact of automobiles; automobile; motorization; 🚗; motor car; automobiles; 🚘; car; a...
+  Pred: a 1958 Plymouth Fury named Christine, which is possessed by a supernatural force
+[triviaqa] #392 | EM=YES | F1=1.00 | Contain=YES | running EM=252/392 (64.29%) | running F1=0.72
+  Q: Who wrote 'The Owl and the Pussycat'?
+  GT: edward lear; jumblies
+  Pred: Edward Lear
+[triviaqa] #393 | EM=YES | F1=1.00 | Contain=YES | running EM=253/393 (64.38%) | running F1=0.73
+  Q: Which female singer had a top ten hit in 1998 with My Favourite Mistake
+  GT: cheryl crow; crow sheryl; sheryl crowe; sheryl suzanne crow; sheryl crow
+  Pred: Sheryl Crow
+[triviaqa] #394 | EM=YES | F1=1.00 | Contain=YES | running EM=254/394 (64.47%) | running F1=0.73
+  Q: What was the name of the driver of the mail train robbed by the great train robbers
+  GT: jack mills; jack mills train driver
+  Pred: Jack Mills
+[triviaqa] #395 | EM=YES | F1=1.00 | Contain=YES | running EM=255/395 (64.56%) | running F1=0.73
+  Q: Who tried to steal Christmas from the town of Whoville?
+  GT: grinch
+  Pred: The Grinch
+[triviaqa] #396 | EM=YES | F1=1.00 | Contain=YES | running EM=256/396 (64.65%) | running F1=0.73
+  Q: Mrs. O’Leary’s cow is credited with starting what?
+  GT: chicago fire of 1871; 1871 chicago fire; louis m cohn; daniel 22pegleg 22 sullivan; pegleg sullivan; great chicago fire; chicago fire 1871; great chicago fir...
+  Pred: The Great Chicago Fire
+[triviaqa] #397 | EM=YES | F1=1.00 | Contain=YES | running EM=257/397 (64.74%) | running F1=0.73
+  Q: What element is often called quicksilver?
+  GT: merdcury; mercury album; mercury disambiguation; mercury; murcury
+  Pred: Mercury
+[triviaqa] #398 | EM=YES | F1=1.00 | Contain=YES | running EM=258/398 (64.82%) | running F1=0.73
+  Q: What is the real name of 'Buster Bloodvessel' lead singer of pop group 'Bad Manners'?
+  GT: douglas trendle
+  Pred: Douglas Trendle
+[triviaqa] #399 | EM=NO | F1=0.00 | Contain=YES | running EM=258/399 (64.66%) | running F1=0.73
+  Q: Which is the largest in area - The Sahara Desert or Australia?
+  GT: sahara climate; saharan desert; moroccan desert; saharah; الصحراء الكبرى; sahara; sahara desert; weather in sahara; aṣ ṣaḥrā al kubra; sa hrāʾ al kubrā; grea...
+  Pred: Australia
+[triviaqa] #400 | EM=YES | F1=1.00 | Contain=YES | running EM=259/400 (64.75%) | running F1=0.73
+  Q: Which Major League Baseball team plays its home games at Chase Field, built in 1992?
+  GT: arizona diamondback; arizona d backs; diamondbacks roster; diamondbacks; dbacks; arizona diamondbacks sports; d backs; diamond backs; phoenix diamondbacks; a...
+  Pred: Arizona Diamondbacks
+[triviaqa] #401 | EM=YES | F1=1.00 | Contain=YES | running EM=260/401 (64.84%) | running F1=0.73
+  Q: According to Greek legend, King Midas was "blessed" by the god Bacchus with the gift that all he touched would turn to what?
+  GT: gold poisoning; aurric; gold metal; flour gold; gold making; e175 e number; monatomic gold; gold; australium; au element; gold compounds; element 79; gold el...
+  Pred: gold
+[triviaqa] #402 | EM=YES | F1=1.00 | Contain=YES | running EM=261/402 (64.93%) | running F1=0.73
+  Q: What is the name of the local pub in Heartbeat
+  GT: aidensfield arms
+  Pred: The Aidensfield Arms
+[triviaqa] #403 | EM=NO | F1=0.14 | Contain=NO | running EM=261/403 (64.76%) | running F1=0.73
+  Q: When running around the athletics track, what does the sound of a bell indicate?
+  GT: last lap
+  Pred: The sound of a bell indicates that the runners are approaching the final lap of the race.
+[triviaqa] #404 | EM=NO | F1=0.11 | Contain=YES | running EM=261/404 (64.60%) | running F1=0.73
+  Q: Ford recently announced that they were shutting down production of another of their marques. Active for the last 81 years, what brand is being discontinued?
+  GT: merdcury; mercury album; mercury disambiguation; mercury; murcury
+  Pred: No Match
+[triviaqa] #405 | EM=YES | F1=1.00 | Contain=YES | running EM=262/405 (64.69%) | running F1=0.73
+  Q: Who did Zola Budd accidentally trip during the LA Olympics in 1984?
+  GT: mary decker slaney; mary slaney; mary decker
+  Pred: Mary Decker
+[triviaqa] #406 | EM=YES | F1=1.00 | Contain=YES | running EM=263/406 (64.78%) | running F1=0.73
+  Q: The 1999 Spike Lee film Summer of Sam focuses on the crimes of what famous serial killer?
+  GT: virginia voskerichian; valentina suriani; christine freund murder victim; 44 caliber killer; richard david falco; son of sam; donna lauria; david berkowitz s...
+  Pred: David Berkowitz
+[triviaqa] #407 | EM=YES | F1=1.00 | Contain=YES | running EM=264/407 (64.86%) | running F1=0.73
+  Q: How many 'Pockets' would you find on a pool table?
+  GT: six; 6
+  Pred: 6
+[triviaqa] #408 | EM=NO | F1=0.67 | Contain=YES | running EM=264/408 (64.71%) | running F1=0.73
+  Q: What plant do we often call the 'Busy Lizzie'?
+  GT: impatien; jewelweed plant; impatiens; jewel weed; impatients; wild balsam; jewelweed; balsamine; balsam weed; balsam flower
+  Pred: Impatiens walleriana
+[triviaqa] #409 | EM=YES | F1=1.00 | Contain=YES | running EM=265/409 (64.79%) | running F1=0.73
+  Q: Major asshat Idi Amin Dada was the president of what African nation from 1971 to 1979?
+  GT: people of uganda; ugandan people; uganda; republic of uganda; ugandan; iso 3166 1 ug; ugandese; ouganda; ugandans
+  Pred: Uganda
+[triviaqa] #410 | EM=YES | F1=1.00 | Contain=YES | running EM=266/410 (64.88%) | running F1=0.73
+  Q: Luminol, a chemical that exhibits chemiluminescence, is often used by forensic examiners to try and detect trace amounts of what?
+  GT: abo blood groups; abo grouping; ab blood; 🅾; type o blood; isohaemagglutinin; abo blood group; o blood; blood type ab; b type blood; 🅱; abo phenotypes; subst...
+  Pred: blood
+[triviaqa] #411 | EM=NO | F1=0.00 | Contain=YES | running EM=266/411 (64.72%) | running F1=0.73
+  Q: Friggatriskaidekaphobia (or triskaidekaphobia or paraskevidekatriaphobia) is the fear of what?
+  GT: friday 13; friday thirteenth; paraskevidekatriaphobe; paraskavedekatriaphobe; paraskevidekatriaphobia; friday 13th; paraskavidekatriaphobia; tuesday 13th; fr...
+  Pred: triskaidekaphobia
+[triviaqa] #412 | EM=YES | F1=1.00 | Contain=YES | running EM=267/412 (64.81%) | running F1=0.73
+  Q: The Sharks face off against what gang in Leonard Bernsteins musical West Side Story?
+  GT: jets; j e t s; jet disambiguation; jets disambiguation; jets rock band; jet; jets band
+  Pred: Jets
+[triviaqa] #413 | EM=YES | F1=1.00 | Contain=YES | running EM=268/413 (64.89%) | running F1=0.73
+  Q: Which 'Carry On' film was set in India?
+  GT: foot and mouth regiment; carry on up khyber; 3rd foot and mouth regiment; third foot and mouth; 3rd foot and mouth
+  Pred: Carry On Up The Khyber
+[triviaqa] #414 | EM=YES | F1=1.00 | Contain=YES | running EM=269/414 (64.98%) | running F1=0.73
+  Q: For what purpose was the leaning tower of Pisa originally built
+  GT: belltower; campanile; campanili; bell towers; campaniles; list of campaniles; bell tower
+  Pred: belltower
+[triviaqa] #415 | EM=YES | F1=1.00 | Contain=YES | running EM=270/415 (65.06%) | running F1=0.73
+  Q: What is the name for the flexible, connective tissue found in the joints between bones?
+  GT: cartilage or cartilages; cartilaginous; cartilage disorders; elastic fibrocartilage; cartilage; cartilege; cartilages; chondric; chondral; fibro cartilage; c...
+  Pred: cartilage
+[triviaqa] #416 | EM=YES | F1=1.00 | Contain=YES | running EM=271/416 (65.14%) | running F1=0.73
+  Q: Which comedienne wrote the autobiography Dear Fatty in 2008
+  GT: dawn henry; dawn french; dawn bignell; mark bignell
+  Pred: Dawn French
+[triviaqa] #417 | EM=NO | F1=0.67 | Contain=YES | running EM=271/417 (64.99%) | running F1=0.73
+  Q: Which amendment to the U.S. Constitution says that no one may be forced to testify against himself
+  GT: fifth; fifth album; 5th; 1 5; fifths; fifth music; fifth disambiguation; ⅕
+  Pred: 5th Amendment
+[triviaqa] #418 | EM=YES | F1=1.00 | Contain=YES | running EM=272/418 (65.07%) | running F1=0.73
+  Q: Who is actress Kate Hudson's mother?
+  GT: goldie hawn; goldy hawn; goldie jean hawn; goldie hahn; ashes to ashes goldie hawn film project; ashes to ashes 2010 film
+  Pred: Goldie Hawn
+[triviaqa] #419 | EM=YES | F1=1.00 | Contain=YES | running EM=273/419 (65.16%) | running F1=0.73
+  Q: With an atomic weight of 22, what element, named for members of Greek mythology, uses the symbol Ti?
+  GT: titanium bolts; titanium jewelry; titanium metallurgy; menachite; titanium sponge; titanium processing; titaniferous; titanium ore; element 22; titanium
+  Pred: Titanium
+[triviaqa] #420 | EM=YES | F1=1.00 | Contain=YES | running EM=274/420 (65.24%) | running F1=0.73
+  Q: According to legend, what "moistened bint" bestowed the sword Excalibur on the young King Arthur?
+  GT: nimuë; numae; viviane arthurian legend; nimueh; lady of lake; nimue; damsel of lake; nyneve; la dame du lac
+  Pred: The Lady of the Lake
+[triviaqa] #421 | EM=NO | F1=0.50 | Contain=YES | running EM=274/421 (65.08%) | running F1=0.73
+  Q: What kind of singing, from the Italian for Manner of the Church, features singers without any musical accompaniment?
+  GT: cappella; recorded cappella review board; capella music; acappela; capela; cappellas; cappela; arcapella; acappella; accapella; acapella; capella; in church ...
+  Pred: unaccompanied vocal music
+[triviaqa] #422 | EM=NO | F1=0.50 | Contain=NO | running EM=274/422 (64.93%) | running F1=0.73
+  Q: The carotid arteries supply blood from the heart to what part of the human body?
+  GT: head and neck; head and neck anatomy
+  Pred: brain, face, scalp, and neck
+[triviaqa] #423 | EM=NO | F1=0.00 | Contain=YES | running EM=274/423 (64.78%) | running F1=0.73
+  Q: What percentage of Mike Tyson's 1995 earnings came from endorsements?
+  GT: zero; 0
+  Pred: No Match
+[triviaqa] #424 | EM=YES | F1=1.00 | Contain=YES | running EM=275/424 (64.86%) | running F1=0.73
+  Q: What 1989 best picture Oscar winning movie, based on a play by Alfred Uhry, and co-starring Morgan Freeman, gave Jessica Tandy, at age 80, the award for Best...
+  GT: driving ms daisy; miss daisy; driving miss daisy film; driving miss daisy
+  Pred: Driving Miss Daisy
+[triviaqa] #425 | EM=YES | F1=1.00 | Contain=YES | running EM=276/425 (64.94%) | running F1=0.73
+  Q: Of what modern country is Sarajevo the captial of?
+  GT: bosnie herzégovine; rbih; bosnia and herzgegovina; bosnia country; bosnia herzegowina; bosnie herzegovine; state of bosnia and herzegovina; bih; bosnia and h...
+  Pred: Bosnia and Herzegovina
+[triviaqa] #426 | EM=YES | F1=1.00 | Contain=YES | running EM=277/426 (65.02%) | running F1=0.73
+  Q: What noted English chemist and physicist, born on Sept 22, 1791, is responsible for the electromagnet and has the SI unit of capacitance named for him?
+  GT: michael farraday; m faraday; faradayan; michael farady; faradic; michael faraday; micheal faraday; faraday death
+  Pred: Michael Faraday
+[triviaqa] #427 | EM=NO | F1=0.00 | Contain=NO | running EM=277/427 (64.87%) | running F1=0.73
+  Q: Chi is the Chinese year of what?
+  GT: cock; cock disambiguation; cocks
+  Pred: No Match
+[triviaqa] #428 | EM=YES | F1=1.00 | Contain=YES | running EM=278/428 (64.95%) | running F1=0.73
+  Q: Pre restraining order(s), who did People magazine name as their first "Sexiest Man Alive", in 1985?
+  GT: mel gibsons; mell gibson; anne reilly gibson; mel colm cille gerard gibson; columcille gerard gibson; mel gibson dui incident; mel columcille gerard gibson; ...
+  Pred: Mel Gibson
+[triviaqa] #429 | EM=YES | F1=1.00 | Contain=YES | running EM=279/429 (65.03%) | running F1=0.73
+  Q: From where do Manx cats originate?
+  GT: i of m; protestantism in isle of man; census in isle of man; man isle of; monaoeda; mannin; religion in isle of man; europe isle of man; islam in isle of man...
+  Pred: The Isle of Man
+[triviaqa] #430 | EM=YES | F1=1.00 | Contain=YES | running EM=280/430 (65.12%) | running F1=0.73
+  Q: Mary Arden had a famous son. Who was he?
+  GT: shakespearean; shakespeere; william shakespear; shakspere william; bill shakespeare; william shekspere; willaim shakespear; shakesepare; shakespearian litera...
+  Pred: William Shakespeare
+[triviaqa] #431 | EM=YES | F1=1.00 | Contain=YES | running EM=281/431 (65.20%) | running F1=0.73
+  Q: What actor has played James Bond in the most movies?
+  GT: sir roger moore; roger george moore; moore sir roger george; turk thrust jr; turk thrust ii; roger moore; geoffrey moore actor; luisa mattioli; moore roger; ...
+  Pred: Roger Moore
+[triviaqa] #432 | EM=YES | F1=1.00 | Contain=YES | running EM=282/432 (65.28%) | running F1=0.73
+  Q: What was the Duke of Wellington's name
+  GT: wellesley arthur; arthur wellesley; arthur wellesley disambiguation; arthur wellesley duke of wellington
+  Pred: Arthur Wellesley
+[triviaqa] #433 | EM=YES | F1=1.00 | Contain=YES | running EM=283/433 (65.36%) | running F1=0.73
+  Q: What is the correct name for a virgin (un-calfed) cow?
+  GT: heiferette; heifers; heifer; heiffer; heifer disambiguation
+  Pred: heifer
+[triviaqa] #434 | EM=YES | F1=1.00 | Contain=YES | running EM=284/434 (65.44%) | running F1=0.73
+  Q: Which ballroom dance is Spanish for double step
+  GT: paso doble; pasodoble; paso double; pasodoble dance
+  Pred: paso-doble
+[triviaqa] #435 | EM=YES | F1=1.00 | Contain=YES | running EM=285/435 (65.52%) | running F1=0.74
+  Q: Mrs. Bridges was the cook in which popular TV series?
+  GT: upstairs downstairs disambiguation; upstairs downstairs
+  Pred: Upstairs Downstairs
+[triviaqa] #436 | EM=YES | F1=1.00 | Contain=YES | running EM=286/436 (65.60%) | running F1=0.74
+  Q: """You're Going To Lose That Girl"" was from which Beatles film in 1965?"
+  GT: help project; help disambiguation; help television; help; i need help; helpme
+  Pred: Help!
+[triviaqa] #437 | EM=NO | F1=0.67 | Contain=YES | running EM=286/437 (65.45%) | running F1=0.74
+  Q: From which wood is a cricket bat traditionally made?
+  GT: willow; willow bark; hooker s willow; osiers; willowily; salix; booth willow; willow tree; willows; willow trees; sallow; willowiness; willowy
+  Pred: English willow
+[triviaqa] #438 | EM=NO | F1=0.00 | Contain=NO | running EM=286/438 (65.30%) | running F1=0.73
+  Q: Richard Burton was nominated 7 times for an Oscar. How many did he win?
+  GT: zero; 0
+  Pred: 2
+[triviaqa] #439 | EM=NO | F1=0.02 | Contain=YES | running EM=286/439 (65.15%) | running F1=0.73
+  Q: Tanganyika and Zanzibar merged in 1964 to become which East African Republic?
+  GT: iso 3166 1 tz; tanznia; tanzanie; tanzania united republic of; jamhuri ya muungano wa tanzania; tanzania; united republic of tanganyika and zanzibar; tansani...
+  Pred: No Match
+[triviaqa] #440 | EM=YES | F1=1.00 | Contain=YES | running EM=287/440 (65.23%) | running F1=0.73
+  Q: Whose backing band is known as The Miami Sound Machine?
+  GT: gloria estefan and miami sound machine; gloria estafan; estefan; gloria estéfan; gloria estefan discography; gloria estefan; gloria estefan miami sound machi...
+  Pred: Gloria Estefan
+[triviaqa] #441 | EM=YES | F1=1.00 | Contain=YES | running EM=288/441 (65.31%) | running F1=0.73
+  Q: Although actually located in Black Canyon, what was the original name for the structure that became known as Hoover dam?
+  GT: hoover dam naming controversy; environmental impact of hoover dam; boulder canyon project act; hoover power plant; hoover dam; hooverdam; boulder canyon proj...
+  Pred: Boulder Dam
+[triviaqa] #442 | EM=YES | F1=1.00 | Contain=YES | running EM=289/442 (65.38%) | running F1=0.73
+  Q: April 18, 1775 saw Paul Revere (along with William Dawes) make his famous midnight ride. What was the stated profession of Mr. Revere?
+  GT: silversmith; silversmithing; argyropaea; silver chaser; silversmithery; silversmiths
+  Pred: silversmith
+[triviaqa] #443 | EM=YES | F1=1.00 | Contain=YES | running EM=290/443 (65.46%) | running F1=0.73
+  Q: Until 1796, there was a state in the United States called Franklin. Today it's known as what?
+  GT: tennessee
+  Pred: Tennessee
+[triviaqa] #444 | EM=YES | F1=1.00 | Contain=YES | running EM=291/444 (65.54%) | running F1=0.74
+  Q: For which art form is Henri Cartier-Bresson best known?
+  GT: photographing; photographic technique; photographics; early photography; photo picture; yachting photography; photography as art form; technology of photogra...
+  Pred: photography
+[triviaqa] #445 | EM=NO | F1=0.67 | Contain=YES | running EM=291/445 (65.39%) | running F1=0.74
+  Q: In which war was the charge of the Light Brigade?
+  GT: 1992–94 crimean crisis; qırım; автономная республика крым; crimea peninsula; crimea region; kirim; crimea; qirim; geography of crimea; крым; climate of crime...
+  Pred: Crimean War
+[triviaqa] #446 | EM=YES | F1=1.00 | Contain=YES | running EM=292/446 (65.47%) | running F1=0.74
+  Q: What is the only letter in the alphabet that does not appear in the name of any of the United States?
+  GT: q alphabet; ⒬; ｑ; 🅀; q letter; ⓠ; 🅠; q; 🄠; 🆀
+  Pred: Q
+[triviaqa] #447 | EM=YES | F1=1.00 | Contain=YES | running EM=293/447 (65.55%) | running F1=0.74
+  Q: What word describes words which are formed from using the first letters of a line in a poem?
+  GT: mesostich; acrostic poem; alphabetic psalms; psalms alphabetic; acrostics; pruntiform; acrostic; acrostic poetry
+  Pred: acrostic
+[triviaqa] #448 | EM=YES | F1=1.00 | Contain=YES | running EM=294/448 (65.62%) | running F1=0.74
+  Q: """When I Fall in Love"" by Nat King Cole featured in which 1986 film?"
+  GT: mona lisa theft; mona lisa; lisa giacondo; la gionconda; la joconde; lonely madonna; la mona lisa; monalisa; monna lisa
+  Pred: Mona Lisa
+[triviaqa] #449 | EM=NO | F1=0.09 | Contain=YES | running EM=294/449 (65.48%) | running F1=0.74
+  Q: What is a Flemish Giant?
+  GT: rabbitkind; rabbit; bunny animal; 🐰; rabits; bunny wabbit; rabbits; cecal pellets; bunnie rabbit; bunnies; rubbits; bunny; bunny rabbit; wild rabbits; rabit;...
+  Pred: A Flemish Giant is a large breed of rabbit recognized in six accepted colors: Black, Blue, Fawn, Light Gray, Sandy, Steel Gray, and White.
+[triviaqa] #450 | EM=NO | F1=0.00 | Contain=NO | running EM=294/450 (65.33%) | running F1=0.73
+  Q: In what year did Marlene Dietrich become a US citizen?
+  GT: one thousand nine hundred and forty one; 1941
+  Pred: 1939
+[triviaqa] #451 | EM=NO | F1=0.00 | Contain=YES | running EM=294/451 (65.19%) | running F1=0.73
+  Q: Who founded the 'London Philharmonic Orchestra' in 1931?
+  GT: thomas beecham; sir thomas beecham 2nd baronet; thomas 2nd baronet beecham; thomas beacham; sir thomas beecham 2nd baronet ch; sir thomas beecham
+  Pred: Unknown
+[triviaqa] #452 | EM=NO | F1=0.57 | Contain=YES | running EM=294/452 (65.04%) | running F1=0.73
+  Q: In Greek mythology which son of Telamon fought Hector in single combat
+  GT: jax; ajax automobile; αἴας; town of ajax; ajax; ajax disambiguation
+  Pred: Ajax, the son of Telamon
+[triviaqa] #453 | EM=YES | F1=1.00 | Contain=YES | running EM=295/453 (65.12%) | running F1=0.73
+  Q: Sheryl Crow has released her version of the Rod Stewart number one First Cut Is The Deepest, but who released it ten years before he did
+  GT: p p arnold; pp arnold
+  Pred: P.P. Arnold
+[triviaqa] #454 | EM=NO | F1=0.29 | Contain=YES | running EM=295/454 (64.98%) | running F1=0.73
+  Q: In which stretch of water did the Mary Rose actually sink
+  GT: solent river; solent; solent valley
+  Pred: The Solent, specifically No-man's-land.
+[triviaqa] #455 | EM=YES | F1=1.00 | Contain=YES | running EM=296/455 (65.05%) | running F1=0.73
+  Q: What nationality was Christian Barnard, the surgeon who performed the first human heart transplant?
+  GT: zuidafrika; azania south africa; south africans; zuid africa; suid africa; afrique du sud; saffa; south africa s; third republic south africa; ningizimu afri...
+  Pred: South African
+[triviaqa] #456 | EM=NO | F1=0.67 | Contain=YES | running EM=296/456 (64.91%) | running F1=0.73
+  Q: 209 year ago today was the founding of the United States Military Academy at what New York location?
+  GT: cullum number; duty honor country; u s military academy; west point military reservation; west point; united states military acadamy; u s military academy ar...
+  Pred: West Point, New York
+[triviaqa] #457 | EM=YES | F1=1.00 | Contain=YES | running EM=297/457 (64.99%) | running F1=0.73
+  Q: On Monday, Samoa became the first nation in nearly 40 years to switch sides of the road. On what side do they now drive?
+  GT: left album; left disambiguation; left
+  Pred: left
+[triviaqa] #458 | EM=YES | F1=1.00 | Contain=YES | running EM=298/458 (65.07%) | running F1=0.73
+  Q: What is the official animal of Canada
+  GT: beaverdams; beaver pelt; beaverdam habitat; beaver; beavers; beaver lodge; beaver houses; castor zoology; salt water beavers; beaver house; castor genus; beever
+  Pred: beaver
+[triviaqa] #459 | EM=YES | F1=1.00 | Contain=YES | running EM=299/459 (65.14%) | running F1=0.73
+  Q: What former U.S. president is known for his staunch support of Habitat for Humanity?
+  GT: jimmie carter junior; jimmie carter jr; james earl carter jr; carter jimmie; jimi carter; james earl carter junior; james earl 22jimmie 22 carter junior; jam...
+  Pred: Jimmy Carter
+[triviaqa] #460 | EM=YES | F1=1.00 | Contain=YES | running EM=300/460 (65.22%) | running F1=0.73
+  Q: Who was the author of 'The Overloaded Ark'?
+  GT: gerald malcolm durrell; gerald m durrell; gerry durrell; gerald durrell
+  Pred: Gerald Durrell
+[triviaqa] #461 | EM=NO | F1=0.25 | Contain=NO | running EM=300/461 (65.08%) | running F1=0.73
+  Q: Snidely Whiplash was the arch-villain on what cartoon series?
+  GT: dudley do right; dudley doright; nell fenwick; dudley do right of mounties; dudley dooright; do right; dudley do right show
+  Pred: The Rocky and Bullwinkle Show
+[triviaqa] #462 | EM=NO | F1=0.80 | Contain=YES | running EM=300/462 (64.94%) | running F1=0.73
+  Q: Name the 1999 movie from its' IMDB plot summary: The lives of guards on Death Row are affected by one of their charges: a black man accused of child murder a...
+  GT: green mile; green mile disambiguation
+  Pred: The Green Mile (1999)
+[triviaqa] #463 | EM=YES | F1=1.00 | Contain=YES | running EM=301/463 (65.01%) | running F1=0.73
+  Q: Named for its chairman, The Warren Commission published its final report on Sept 27, 1965. What event was it seated to investigate?
+  GT: shooting of john f kennedy; kennedy assasination; assassination of john f kennedy; john fitzgerald kennedy s assassination; kennedy s assassination; jfk assa...
+  Pred: The assassination of President John F. Kennedy
+[triviaqa] #464 | EM=YES | F1=1.00 | Contain=YES | running EM=302/464 (65.09%) | running F1=0.73
+  Q: What was the only western that Brigitte Bardot appeared in (it was based on a book by Louis L'Amour)
+  GT: shalako
+  Pred: Shalako
+[triviaqa] #465 | EM=YES | F1=1.00 | Contain=YES | running EM=303/465 (65.16%) | running F1=0.73
+  Q: What Latin phrase, which translates to English as "for this", is taken to mean something designed for a specific problem or task?
+  GT: ad hoc; add hoc; ad hoc query; ad hoc computer network; adhoc; for this purpose; ad hock; ad hoc committee
+  Pred: ad hoc
+[triviaqa] #466 | EM=YES | F1=1.00 | Contain=YES | running EM=304/466 (65.24%) | running F1=0.74
+  Q: In children's TV by what name is Sir Topham Hatt better known
+  GT: lady hatt; bridget hatt; stephen hatt; sir topham hatt; fat controller; topham hatt; mrs hatt; mrs dowager hatt; sir topham s butler; sir topham hatt s butle...
+  Pred: Sir Topham Hatt
+[triviaqa] #467 | EM=YES | F1=1.00 | Contain=YES | running EM=305/467 (65.31%) | running F1=0.74
+  Q: What famed British naturalist, born on Feb 12, 1809, wrote a book famously subtitled "the Preservation of Favoured Races in the Struggle for Life"?
+  GT: cr darwin; darwin200; darwin 200; charles robert darwin; darwin s theory; charles r darwin; charels darwin; mary darwin; www darwin200 org uk; c r darwin; ch...
+  Pred: Charles Darwin
+[triviaqa] #468 | EM=YES | F1=1.00 | Contain=YES | running EM=306/468 (65.38%) | running F1=0.74
+  Q: What animal's name means earth pig in Dutch
+  GT: aardwark; ardvark; aardvarks; aardvarc; aardvarken; aadvark; aardvark word; orycteropus afer; aardvark; aadrvark; aardvaark; earth pig; cape ant eater; aardvork
+  Pred: aardvark
+[triviaqa] #469 | EM=NO | F1=0.00 | Contain=NO | running EM=306/469 (65.25%) | running F1=0.74
+  Q: What do you practice in a dojo?
+  GT: combat arts; spirituality in martial arts; full contact fighting; fighting style; martial school; combat art; martialarts; martial artists; martial arts; mar...
+  Pred: Kihon, Kumite, Kata, and mental and spiritual training.
+[triviaqa] #470 | EM=YES | F1=1.00 | Contain=YES | running EM=307/470 (65.32%) | running F1=0.74
+  Q: Born in Scranton, PA on Nov 20, 1942, current Vice President Joe Biden spent 36 years as a senator from which state?
+  GT: delaware united states; economy of delaware; 1st state; education in delaware; alcohol law of delaware; delawarean; delaware u s; demographics of delaware; b...
+  Pred: Delaware
+[triviaqa] #471 | EM=YES | F1=1.00 | Contain=YES | running EM=308/471 (65.39%) | running F1=0.74
+  Q: Who had a top album in 1985 with Like A Virgin
+  GT: madonna disambiguation; madonna album disambiguation; madonna film; madonna
+  Pred: Madonna
+[triviaqa] #472 | EM=YES | F1=1.00 | Contain=YES | running EM=309/472 (65.47%) | running F1=0.74
+  Q: Hajduk Split FC play in which country
+  GT: trema croatia; croazia; croacia; iso 3166 1 hr; republika hrvatska; croácia; kroatien; hrvatska; croatia hrvatska; hirvatistan; kroatia; republic of croatia;...
+  Pred: Croatia
+[triviaqa] #473 | EM=YES | F1=1.00 | Contain=YES | running EM=310/473 (65.54%) | running F1=0.74
+  Q: What was the name of the TV comedy series starring Windsor Davies and Donald Sinden as Antique dealers?
+  GT: never twain
+  Pred: Never The Twain
+[triviaqa] #474 | EM=YES | F1=1.00 | Contain=YES | running EM=311/474 (65.61%) | running F1=0.74
+  Q: Which of Robin Hood's Merry Men was he forced to fight with quarterstaffs on a narrow bridge?
+  GT: little john
+  Pred: Little John
+[triviaqa] #475 | EM=YES | F1=1.00 | Contain=YES | running EM=312/475 (65.68%) | running F1=0.74
+  Q: Which cup competition was founded by Charles William Alcock in the eighteen seventies
+  GT: fa cup with budweiser; england cup; english cup; fa cup player of month; fa cup trophy; fa challenge cup; england fa cup; football association challenge cup;...
+  Pred: FA Cup
+[triviaqa] #476 | EM=NO | F1=0.00 | Contain=NO | running EM=312/476 (65.55%) | running F1=0.74
+  Q: It began life as The Nashville Network, but changed its name to what in 2003 following a lawsuit raised by an asshat director over the new name?
+  GT: spike tv channel; spike network; spike com; spike tv network; spiketv; spike tv; new tnn; national network; spike channel
+  Pred: Country Music Television (CMT)
+[triviaqa] #477 | EM=YES | F1=1.00 | Contain=YES | running EM=313/477 (65.62%) | running F1=0.74
+  Q: On the 11th of February 1990 Mike Tyson (and the world!) was stunned when he lost his heavyweight crown in the tenth round to which boxer?
+  GT: james buster douglas; james 22buster 22 douglas; james douglas boxer; buster douglas
+  Pred: James "Buster" Douglas
+[triviaqa] #478 | EM=YES | F1=1.00 | Contain=YES | running EM=314/478 (65.69%) | running F1=0.74
+  Q: Who had a 1992 hit with You're The One for Me Fatty
+  GT: morrisey; steven morrissey; morissey; morrissey; steven patrick morrissey; stephen patrick morrissey; morrissy; steven morissey; mozzer; tina dehgani; stephe...
+  Pred: Morrissey
+[triviaqa] #479 | EM=NO | F1=0.22 | Contain=YES | running EM=314/479 (65.55%) | running F1=0.74
+  Q: Eventually a newspaper photographer for the Daily Bugle, what is the alter ego of Spiderman?
+  GT: spider man comics; spindelmannen; web slinger; spiderman; parker peter; human spider; peter parker; peter parker fiction; fictional history of spider man; sc...
+  Pred: No Match
+[triviaqa] #480 | EM=YES | F1=1.00 | Contain=YES | running EM=315/480 (65.62%) | running F1=0.74
+  Q: Held at Max Yasgurs 600 acre dairy farm, what event, which opened on Aug 15, 1969, was billed as An Aquarian Exposition: 3 Days of Peace & Music?
+  GT: woodstock music festival; woodstock movie; woodstock music and art fair; woodstock 1969; woodstock art festival; woodstock music and arts fair; woodstock mus...
+  Pred: Woodstock Music Festival
+[triviaqa] #481 | EM=YES | F1=1.00 | Contain=YES | running EM=316/481 (65.70%) | running F1=0.74
+  Q: Which group had a hit album titled Breakfast In America
+  GT: super tramp; stanley august miesegaes; supertramp
+  Pred: Supertramp
+[triviaqa] #482 | EM=YES | F1=1.00 | Contain=YES | running EM=317/482 (65.77%) | running F1=0.74
+  Q: In 1990, George H. W. Bush famously said “I do not like what. And I haven’t liked it since I was a little kid and my mother made me eat it. And I’m President...
+  GT: broccli; broccholi; purple sprouting broccoli; brocolli; italica group; brocoli; sprouting broccoli; broccoli
+  Pred: broccoli
+[triviaqa] #483 | EM=NO | F1=0.00 | Contain=YES | running EM=317/483 (65.63%) | running F1=0.74
+  Q: What was the home ground of Leyton Orient called before it became the Matchroom Stadium?
+  GT: brisbane road; matchroom stadium; brisbane road stadium
+  Pred: No information available to determine the original name of the ground.
+[triviaqa] #484 | EM=YES | F1=1.00 | Contain=YES | running EM=318/484 (65.70%) | running F1=0.74
+  Q: What is the waxy secretion of the sperm whale used in perfume manufacturing
+  GT: gray amber; amber gris; ambrinol; ambre gris; ambergreece; ambrox; ambergris; ambergrease; ambergris tincture; amber grease; ambra grisea; ambarum; ambra gri...
+  Pred: ambergris
+[triviaqa] #485 | EM=NO | F1=0.00 | Contain=YES | running EM=318/485 (65.57%) | running F1=0.74
+  Q: Used as an alloy in making high-speed cutting tools, mo is the symbol for what silver-white metallic element?
+  GT: molybdenum; molybdenium; molybdenom; molybdenum alloy; element 42; molybdous; molybdinum; molybdic; dimolybdenum; molybendium; molybdenum alloys
+  Pred: Mo
+[triviaqa] #486 | EM=YES | F1=1.00 | Contain=YES | running EM=319/486 (65.64%) | running F1=0.74
+  Q: Which famous actor is well known for his voice over work, including the "This is CNN" tag and the voice of Darth Vader in the Star Wars film franchise?
+  GT: neb langston; james earl jones
+  Pred: James Earl Jones
+[triviaqa] #487 | EM=YES | F1=1.00 | Contain=YES | running EM=320/487 (65.71%) | running F1=0.74
+  Q: Which Saturday Night Live cast member was known for his “You look… mahvelous!” send up of Argentinian born actor Fernando Lamas?
+  GT: billy kristol; billy crystal; billy cristal; billy krystol
+  Pred: Billy Crystal
+[triviaqa] #488 | EM=YES | F1=1.00 | Contain=YES | running EM=321/488 (65.78%) | running F1=0.74
+  Q: July 2, 1961 saw what Nobel Prize winning author take his own life in Ketchum, Idaho, who once stated that every boy must Plant a tree, Fight a bull, Write a...
+  GT: ernest hemingway things turn sour; ernest miller hemmingway; hemingwayan; famous at twenty five thirty master; hemingway ernest; ernesthemingway fromrealityt...
+  Pred: Ernest Hemingway
+[triviaqa] #489 | EM=YES | F1=1.00 | Contain=YES | running EM=322/489 (65.85%) | running F1=0.74
+  Q: In electronics, what is a PCB?
+  GT: heavy copper; circuit card assembly; pcb cam; printed circuit design; copper clad laminates; signal traces; circuit board; printed circuit boards; circuitboa...
+  Pred: Printed Circuit Board
+[triviaqa] #490 | EM=YES | F1=1.00 | Contain=YES | running EM=323/490 (65.92%) | running F1=0.74
+  Q: Darwin is the capital of which Australian Territory?
+  GT: north territory; northern territory of australia; northernterritory; northern territories australia; northern territory australia; south australia northern t...
+  Pred: Northern Territory
+[triviaqa] #491 | EM=YES | F1=1.00 | Contain=YES | running EM=324/491 (65.99%) | running F1=0.74
+  Q: June 2, 2004 saw the beginning of the streak in which what Edmonds, WA native won 74 consecutive games on Jeopardy?
+  GT: nancy zerg; ken jennings iii; ken william jennings iii; ken jennings; ken jennings game summaries; kenneth william jennings iii; kenneth wayne jennings iii
+  Pred: Ken Jennings
+[triviaqa] #492 | EM=NO | F1=0.67 | Contain=YES | running EM=324/492 (65.85%) | running F1=0.74
+  Q: Anchored by the star Polaris, the constellation ursa minor represents what animal?
+  GT: bear film; bear; bears; bear brand; bear disambiguation; bears disambiguation
+  Pred: Little Bear
+[triviaqa] #493 | EM=NO | F1=0.29 | Contain=NO | running EM=324/493 (65.72%) | running F1=0.74
+  Q: What would a Scotsman do with a spurtle?
+  GT: eat porridge
+  Pred: break down lumps in porridge
+[triviaqa] #494 | EM=NO | F1=0.27 | Contain=YES | running EM=324/494 (65.59%) | running F1=0.74
+  Q: Miss Lemon is what detectives confidential secretary?
+  GT: hercule poirot; agatha christie hercule poirot; poirot; miss lemon; felicity lemon; hercules poirot; little grey cells; poriot
+  Pred: Miss Lemon is the confidential secretary of both Mr. Parker Pyne and Hercule Poirot.
+[triviaqa] #495 | EM=YES | F1=1.00 | Contain=YES | running EM=325/495 (65.66%) | running F1=0.74
+  Q: Which poet is buried in Grasmere churchyard?
+  GT: w wordsworth; annette vallon; wordsworth william; wordsworth; bard of rydal mount; william wordsworth; william woodsworth
+  Pred: William Wordsworth
+[triviaqa] #496 | EM=YES | F1=1.00 | Contain=YES | running EM=326/496 (65.73%) | running F1=0.74
+  Q: What Latin phrase, which translates as for the public good, is taken to mean professional work undertaken voluntarily and without payment?
+  GT: pro bono publico; probono; free legal assistance; pro bono
+  Pred: Pro Bono
+[triviaqa] #497 | EM=YES | F1=1.00 | Contain=YES | running EM=327/497 (65.79%) | running F1=0.74
+  Q: November 10, 1775 at Tun Tavern, Philadelphia, saw the official birth of branch of the US armed forces?
+  GT: us marines corps; us marine corps; united states marines corps; u s m c; marine on line; improvise adapt and overcome; adapt improvise overcome; usmc; marine...
+  Pred: The United States Marine Corps
+[triviaqa] #498 | EM=NO | F1=0.50 | Contain=NO | running EM=327/498 (65.66%) | running F1=0.74
+  Q: If you were eating a 'Knickerbocker Glory' - What would you be eating?
+  GT: ice cream sundae
+  Pred: Tall, layered ice cream dessert
+[triviaqa] #499 | EM=YES | F1=1.00 | Contain=YES | running EM=328/499 (65.73%) | running F1=0.74
+  Q: May 28, 1998 saw the death of what Saturday Night Live alum, and voice of Lionel Hutz and Troy McClure on The Simpsons, who was shot while he slept by his wi...
+  GT: phil hartmann; brynn hartman; philip edward hartman; phil show; philip edward hartmann; phil hartman; vicki jo omdahl; brynn omdahl; death of phil hartman; p...
+  Pred: Phil Hartman
+[triviaqa] #500 | EM=YES | F1=1.00 | Contain=YES | running EM=329/500 (65.80%) | running F1=0.74
+  Q: Born in 1927, which pianist had hits with 'Side Saddle' and 'Roulette'?
+  GT: trevor stanford; russ conway
+  Pred: Russ Conway
+[triviaqa] #501 | EM=YES | F1=1.00 | Contain=YES | running EM=330/501 (65.87%) | running F1=0.74
+  Q: Bring on the Empty Horses was the sequel to which other David Niven Autobiography/Memoir ?
+  GT: moon s balloon
+  Pred: The Moon's a Balloon!
+[triviaqa] #502 | EM=NO | F1=0.07 | Contain=YES | running EM=330/502 (65.74%) | running F1=0.74
+  Q: Who's missing: Miss Scarlett, Mrs. White, Mr. Green, Mrs. Peacock, Professor Plum?
+  GT: doctor black; miss scarlet; miss scarlett; ms scarlet; mrs white; colonel mustard; mr boddy; list of cluedo characters; rev green; mr green clue; professor p...
+  Pred: No Match
+[triviaqa] #503 | EM=YES | F1=1.00 | Contain=YES | running EM=331/503 (65.81%) | running F1=0.74
+  Q: Which is the largest cat in the world?
+  GT: panthera tigris altaica; manchurian tiger; northeast china tiger; amur tiger; siberian tigers; amur tigers; korean tiger; north china tiger; ussurian tiger; ...
+  Pred: Siberian tiger
+[triviaqa] #504 | EM=NO | F1=0.40 | Contain=YES | running EM=331/504 (65.67%) | running F1=0.74
+  Q: What are the world's three most expensive spices
+  GT: saffran; persian saffron; azafran; safron; zafraan; e164 e number; saffron; zafran
+  Pred: Saffron, Pure Vanilla, Cardamom
+[triviaqa] #505 | EM=YES | F1=1.00 | Contain=YES | running EM=332/505 (65.74%) | running F1=0.74
+  Q: In Norse mythology, what group of female figures decides who lives and dies during battle, and then transports half of the dead to Valhalla?
+  GT: choosers of slain; gol valkyrie; goll valkyrie; valkyries; valkyrie; valkyrie wagner; walkyrie; valkyrs; hair link; valkrie; valkyria; valcyrie; wælcyrige; v...
+  Pred: Valkyries
+[triviaqa] #506 | EM=YES | F1=1.00 | Contain=YES | running EM=333/506 (65.81%) | running F1=0.74
+  Q: Diane Belmont became famous as who?
+  GT: lucille désirée ball; lucy ball; dianne belmont; lucille ball; lucile ball; lucy carmichael; lucy carter; lucille desiree ball
+  Pred: Lucille Ball
+[triviaqa] #507 | EM=YES | F1=1.00 | Contain=YES | running EM=334/507 (65.88%) | running F1=0.74
+  Q: Who wrote the poems If, Gunga Din, Mandalay, and The Female of the Species
+  GT: ruyard kipling; rudyard kipling; kiplingian; r kipling; joseph rudyard kipling; bard of empire; kipling rudyard; rudy kipling; kipling; kiplingesque; rudyard...
+  Pred: Rudyard Kipling
+[triviaqa] #508 | EM=YES | F1=1.00 | Contain=YES | running EM=335/508 (65.94%) | running F1=0.74
+  Q: What author penned a satirical essay in 1729, entitled A Modest Proposal, modestly proposing that the poor should eat their babies?
+  GT: gregory miso sarum; tom ashe; t tinker; simon wagstaff esq; jonathan swift; student of astrology; johnathon swift; gregory misosarum; t n philomath; m flor o...
+  Pred: Jonathan Swift
+[triviaqa] #509 | EM=YES | F1=1.00 | Contain=YES | running EM=336/509 (66.01%) | running F1=0.74
+  Q: What is the name of Inspector Clousseau's manservant
+  GT: cato disambiguation; cato
+  Pred: Cato
+[triviaqa] #510 | EM=YES | F1=1.00 | Contain=YES | running EM=337/510 (66.08%) | running F1=0.74
+  Q: Pok ta Pok started in Mexico - what modern game/sport is it?
+  GT: men s basketball; baksetball; baketball; boy s basketball; basketball club; high school basketball; rim basketball; basketball team; bball; unicycle basketba...
+  Pred: Basketball
+[triviaqa] #511 | EM=NO | F1=0.67 | Contain=YES | running EM=337/511 (65.95%) | running F1=0.74
+  Q: What is the name of the giraffe that Toys-r-us uses as its' mascot?
+  GT: geoffroy; geoffrey disambiguation; geoff; geoffrey
+  Pred: Geoffrey the Giraffe
+[triviaqa] #512 | EM=YES | F1=1.00 | Contain=YES | running EM=338/512 (66.02%) | running F1=0.74
+  Q: Who was Don McLean singing about in Vincent
+  GT: van gough; vangogh; van gogh; vincent van gogh; van gogh s ear; van goth; vincent van gogh s ear; vincent van goth; vince van gogh; vincent vangogh; van goh;...
+  Pred: Vincent van Gogh
+[triviaqa] #513 | EM=YES | F1=1.00 | Contain=YES | running EM=339/513 (66.08%) | running F1=0.74
+  Q: Who was the author of 'The 39 steps'?
+  GT: buchan john; buchan john sir; sir john buchan; john scantlebury blenkiron; lord tweedsmuir; john buchan 1st baron tweedsmuir; john buchan; baron tweedsmuir o...
+  Pred: John Buchan
+[triviaqa] #514 | EM=YES | F1=1.00 | Contain=YES | running EM=340/514 (66.15%) | running F1=0.74
+  Q: What is the deepest male singing voice?
+  GT: bass musical term; basses; bass disambiguation; bass
+  Pred: Bass
+[triviaqa] #515 | EM=YES | F1=1.00 | Contain=YES | running EM=341/515 (66.21%) | running F1=0.74
+  Q: What color is the lowest level of the Homeland Security Advisory System?
+  GT: greenishness; color green; 0 255 0; green color; green; rgb 0 255 0; avacado color; greenest; list of terms associated with color green; greenness; greenishl...
+  Pred: green
+[triviaqa] #516 | EM=NO | F1=0.44 | Contain=YES | running EM=341/516 (66.09%) | running F1=0.74
+  Q: Who famously described England as “a nation of shopkeepers”?
+  GT: smith; vile maxim; adam smith
+  Pred: Napoleon Bonaparte (originally attributed to Adam Smith)
+[triviaqa] #517 | EM=NO | F1=0.00 | Contain=NO | running EM=341/517 (65.96%) | running F1=0.74
+  Q: Who's missing: George Costanza, Elaine Bennes, Cosmo Kramer
+  GT: jerome seinfeld; jerome 22jerry 22 seinfeld; jerry seinfield; jerry sienfeld; jerry seinfeld
+  Pred: None
+[triviaqa] #518 | EM=NO | F1=0.75 | Contain=YES | running EM=341/518 (65.83%) | running F1=0.74
+  Q: The ESRB provides ratings for what?
+  GT: computer and video game; 3d computer game; graphenspiele; video and computer game; computer video game; computer and video game distinction; videogame type; ...
+  Pred: Video games and apps
+[triviaqa] #519 | EM=YES | F1=1.00 | Contain=YES | running EM=342/519 (65.90%) | running F1=0.74
+  Q: In 'Scarface' which character was played by Al Pacino?
+  GT: antonio 22tony 22 montana; antonio raimundo montana; antonio montana; tony montana
+  Pred: Tony Montana
+[triviaqa] #520 | EM=YES | F1=1.00 | Contain=YES | running EM=343/520 (65.96%) | running F1=0.74
+  Q: In which American state would you find Mt. Rushmore?
+  GT: 40th state; sodak; nicknames of south dakota; state of south dakota; politics of south dakota; south dakota; economy of south dakota; south dakotan; south da...
+  Pred: South Dakota
+[triviaqa] #521 | EM=YES | F1=1.00 | Contain=YES | running EM=344/521 (66.03%) | running F1=0.74
+  Q: What is the name of the island in Norway where over 80 people lost their lives to a gunman on 22nd July?
+  GT: utoya island; utoya; utoeya; utøya; utoeya island; utöya
+  Pred: Utøya
+[triviaqa] #522 | EM=YES | F1=1.00 | Contain=YES | running EM=345/522 (66.09%) | running F1=0.74
+  Q: Which superhero lives beneath the sea and can command all of the marine life via telepathic abilities?
+  GT: aquaman; aquaman arthur joseph curry; aqua man; sea king comics; dweller of depths; aquaman comic book; aquacave; aquaman ii; aquaman modern day; aquaman art...
+  Pred: Aquaman
+[triviaqa] #523 | EM=YES | F1=1.00 | Contain=YES | running EM=346/523 (66.16%) | running F1=0.74
+  Q: Which Beatle was the first to release a solo album
+  GT: george o hara pseudonym; harrison george; george h; quiet beatle; p roducer; arthur wax; jai raj harisein; spike wilbury; hari georgeson; george harrison mbe...
+  Pred: George Harrison
+[triviaqa] #524 | EM=YES | F1=1.00 | Contain=YES | running EM=347/524 (66.22%) | running F1=0.74
+  Q: In which country will you find the 'Carisbrook Rugby Stadium'?
+  GT: newzealand; new zealand; aotearoa; kiwistan; new zeland; staten land; staten landt; neo zealand; new zeeland; mew zealand; new zealand s; new zealend; iso 31...
+  Pred: New Zealand
+[triviaqa] #525 | EM=YES | F1=1.00 | Contain=YES | running EM=348/525 (66.29%) | running F1=0.74
+  Q: What was the name of the German airship that burst into flames at its moorings in New Jersey in 1937
+  GT: hindenburg airship; d lz129; hindenburg; lz129; german airship hindenburg; d lz129 hindenburg; airship lz129 hindenburg; lz 129; hindenberg; lz 129 hindenbur...
+  Pred: Hindenburg
+[triviaqa] #526 | EM=YES | F1=1.00 | Contain=YES | running EM=349/526 (66.35%) | running F1=0.75
+  Q: At what Bikini Bottom restaurant does SpongeBob Squarepants earn a living as a fry cook?
+  GT: krusty krab; krusty crab; krabby patties; crusty crab; krabby patty; crusty krab
+  Pred: Krusty Krab
+[triviaqa] #527 | EM=YES | F1=1.00 | Contain=YES | running EM=350/527 (66.41%) | running F1=0.75
+  Q: In what year did Captain Matthew Webb become the first to swim the English Channel?
+  GT: one thousand eight hundred and seventy five; 1875
+  Pred: 1875
+[triviaqa] #528 | EM=NO | F1=0.44 | Contain=NO | running EM=350/528 (66.29%) | running F1=0.75
+  Q: What is a 'Judogi' used for?
+  GT: judogi is formal japanese name for traditional uniform used for judo practice and competition
+  Pred: Judo practice and competition.
+[triviaqa] #529 | EM=NO | F1=0.01 | Contain=YES | running EM=350/529 (66.16%) | running F1=0.74
+  Q: What Seattle Weekly cartoonist was forced to go into hiding last week after major asshat imam Anwar al-Awlaki issued a fatwa suggesting she be killed for her...
+  GT: draw mohammad day; everybody draw mohammad day; citizens against citizens against humor; draw muhammed day; everybody draw mohammed day; cacah; draw mohammed...
+  Pred: No Match
+[triviaqa] #530 | EM=YES | F1=1.00 | Contain=YES | running EM=351/530 (66.23%) | running F1=0.74
+  Q: We know it as Myanmar today. By what name was it known before 1989?
+  GT: myanmar formerly burma; republic of union of myanmar; myanmar burma; union of myanmar; birmania; union of burma; birman empire; birma; burmese republic; pyid...
+  Pred: Burma
+[triviaqa] #531 | EM=NO | F1=0.50 | Contain=YES | running EM=351/531 (66.10%) | running F1=0.74
+  Q: September 9, 1969 saw what made an official language of Canada?
+  GT: french disambiguation; french; frenchness; francaise; francais; frrench; français
+  Pred: English and French
+[triviaqa] #532 | EM=NO | F1=0.01 | Contain=YES | running EM=351/532 (65.98%) | running F1=0.74
+  Q: What cocktail typically consists of 3 parts vodka, 1 part apple schnapps, and 1 part cointreau?
+  GT: apple martini; appletini
+  Pred: No Match
+[triviaqa] #533 | EM=YES | F1=1.00 | Contain=YES | running EM=352/533 (66.04%) | running F1=0.74
+  Q: Milford Sound in Fiordland National Park that was once judged the world's top travel destination is in which country
+  GT: newzealand; new zealand; aotearoa; kiwistan; new zeland; staten land; staten landt; neo zealand; new zeeland; mew zealand; new zealand s; new zealend; iso 31...
+  Pred: New Zealand
+[triviaqa] #534 | EM=NO | F1=0.25 | Contain=YES | running EM=352/534 (65.92%) | running F1=0.74
+  Q: In the London 2012 Olympics where did the Taekwondo take place
+  GT: excell; excel; excel disambiguation
+  Pred: ExCeL arena in London's Docklands area
+[triviaqa] #535 | EM=YES | F1=1.00 | Contain=YES | running EM=353/535 (65.98%) | running F1=0.74
+  Q: Which county did Ian Botham join when he left Somerset
+  GT: worcestershire england; wribbenhall; wigorn; county of worcester; worchestershire; worcs; worcestershire; worcestershire county
+  Pred: Worcestershire
+[triviaqa] #536 | EM=YES | F1=1.00 | Contain=YES | running EM=354/536 (66.04%) | running F1=0.74
+  Q: Name the book and the author: 'The Time Traveler (for so it will be convenient to speak of him) was expounding a recondite matter to us.'
+  GT: time machine by h g wells
+  Pred: The Time Machine by H.G. Wells
+[triviaqa] #537 | EM=NO | F1=0.00 | Contain=NO | running EM=354/537 (65.92%) | running F1=0.74
+  Q: Which African country is the worlds highest producer of cocoa?
+  GT: ghanaian republic; republic ghana; ghana; republic of ghana; iso 3166 1 gh; ghanaian; country ghana; ghana homeland; democradic republic of ghana; etymology ...
+  Pred: Côte d'Ivoire
+[triviaqa] #538 | EM=YES | F1=1.00 | Contain=YES | running EM=355/538 (65.99%) | running F1=0.74
+  Q: The principal author of the US Constitution and writer of over 1/3 of the Federalist Papers, which US President, the 4th, was CIC during the War of 1812?
+  GT: father of constitution; madison james; presidency of james madison; madison administration; president madison; jimmy madison; nelly conway madison; president...
+  Pred: James Madison
+[triviaqa] #539 | EM=YES | F1=1.00 | Contain=YES | running EM=356/539 (66.05%) | running F1=0.74
+  Q: What is the offspring of a donkey and a horse called
+  GT: mule train transport; mule production; mule; mule zoology
+  Pred: Mule
+[triviaqa] #540 | EM=YES | F1=1.00 | Contain=YES | running EM=357/540 (66.11%) | running F1=0.74
+  Q: What is the lowest level of the Earth's atmosphere?
+  GT: troposphere; epitroposphere; tropospherical; tropospheric; tropospheres; trophosphere; tropospherics; troposhere; tropospherically
+  Pred: troposphere
+[triviaqa] #541 | EM=YES | F1=1.00 | Contain=YES | running EM=358/541 (66.17%) | running F1=0.74
+  Q: What is the name of the long running science program, produced by WGBH in Boston, on PBS, running from 1974 to the present?
+  GT: nova and supernova; rne; nova; novas; classical nova; helium nova; stellar surface fusion; recurrent nova; cne; recurring nova
+  Pred: Nova
+[triviaqa] #542 | EM=YES | F1=1.00 | Contain=YES | running EM=359/542 (66.24%) | running F1=0.74
+  Q: Fez is an African city which gives its name to a type of hat. In which country is it?
+  GT: moraco; morrocco; maroc disambiguation; sherifian empire; al mamlaka al maġribiyya; norocco; maroco; name of morocco; kingdom of morocco; maroc; iso 3166 1 m...
+  Pred: Morocco
+[triviaqa] #543 | EM=YES | F1=1.00 | Contain=YES | running EM=360/543 (66.30%) | running F1=0.74
+  Q: "Who recorded the 70's disco song ""You're My First, My last, My Everything""?"
+  GT: barry white love unlimited orchestra; barry eugene white; barry white singer; barrence eugene carter; barry white; walrus of love
+  Pred: Barry White
+[triviaqa] #544 | EM=NO | F1=0.25 | Contain=YES | running EM=360/544 (66.18%) | running F1=0.74
+  Q: Where do you find the Bridal Veil, American, and Horseshoe Falls?
+  GT: over falls in barrel; cataratas del niagara; niagra falls; hell of waters; cataratas del niágara; over niagara falls; niagara falls n y and ont; niagara fall...
+  Pred: The border of the USA and Canada
+[triviaqa] #545 | EM=YES | F1=1.00 | Contain=YES | running EM=361/545 (66.24%) | running F1=0.74
+  Q: Who played 'Peter Pan' in Spielberg's 'Hook'?
+  GT: zak williams; valerie velardi; marty fromage; throbbing python of love; ray d tutto; robin williams live on broadway; robin mclaurin williams; cody williams;...
+  Pred: Robin Williams
+[triviaqa] #546 | EM=YES | F1=1.00 | Contain=YES | running EM=362/546 (66.30%) | running F1=0.74
+  Q: On today's date in 1908, the first of over 15 million of what automobile was first produced?
+  GT: ford t model; ford model t; ford t; model t ford; t ford; fliver; model t; tin lizzie; tin lizzy; t model
+  Pred: Model T
+[triviaqa] #547 | EM=NO | F1=0.00 | Contain=YES | running EM=362/547 (66.18%) | running F1=0.74
+  Q: What does lager literally mean in German?
+  GT: stored; storage; storage disambiguation; storage room
+  Pred: lagern
+[triviaqa] #548 | EM=NO | F1=0.67 | Contain=YES | running EM=362/548 (66.06%) | running F1=0.74
+  Q: What is the name of the Sergeant who constantly harasses the goldbricking Private Beetle Bailey in the comic strip of the same name?
+  GT: snorkel swimming; water snorkeling; snorkling; snorkelling; snorkle; swimmer s snorkel; snorkels; snorkeling; breath hold diving; snorkeler; snorkeller; snor...
+  Pred: Sergeant Snorkel
+[triviaqa] #549 | EM=NO | F1=0.06 | Contain=YES | running EM=362/549 (65.94%) | running F1=0.74
+  Q: Who played the sergeant in Carry On Sergeant?
+  GT: bill hartnell; william hartnell; william hartnel
+  Pred: No Match
+[triviaqa] #550 | EM=NO | F1=0.03 | Contain=NO | running EM=362/550 (65.82%) | running F1=0.74
+  Q: What colour is the cross on the Greek Flag?
+  GT: color white; white political adjective; whitishness; rgb 255 255 255; 255 255 255; ffffff; whitishly; white colour; man on white horse; white; whiter; white ...
+  Pred: No Match
+[triviaqa] #551 | EM=YES | F1=1.00 | Contain=YES | running EM=363/551 (65.88%) | running F1=0.74
+  Q: Opened in May 11, 2010, Charlotte, NC is the home to the Hall of Fame for what popular outdoor sport, the second most watched sport (on TV) in the US?
+  GT: economics and global expansion of nascar; nascar; nascar com; nascar tv deal; national association for stock car auto racing; non american nascar drivers; fo...
+  Pred: NASCAR
+[triviaqa] #552 | EM=NO | F1=0.77 | Contain=NO | running EM=363/552 (65.76%) | running F1=0.74
+  Q: Who were the first men to fly the Atlantic non stop in 1919
+  GT: alcock and brown; transatlantic flight of alcock and brown; alcock brown; transatlantic flight of alcock brown; john alcock and arthur brown
+  Pred: Captain John Alcock and Lieutenant Arthur Whitten-Brown
+[triviaqa] #553 | EM=YES | F1=1.00 | Contain=YES | running EM=364/553 (65.82%) | running F1=0.74
+  Q: What naturalist’s quest to save Rwandan gorillas from poaching was made into the 1988 Academy Award-nominated film “Gorillas in the Mist”?
+  GT: dian fossey; wayne mcguire; diane fossey; wayne richard mcguire; dian fossey gorilla fund; kitty price
+  Pred: Dian Fossey
+[triviaqa] #554 | EM=NO | F1=0.00 | Contain=NO | running EM=364/554 (65.70%) | running F1=0.74
+  Q: What 'B' is a collector of rare books?
+  GT: bibliophily; book worm; biblioholic; bibliophiliac; bibliophilic; bibliophiles; biblioholist; bookman reading; bibliophilia; bibliophilism; bookworm; bibliop...
+  Pred: No Match
+[triviaqa] #555 | EM=YES | F1=1.00 | Contain=YES | running EM=365/555 (65.77%) | running F1=0.74
+  Q: What device uses radio waves bounced off of objects to identify their range, altitude, direction, and speed?
+  GT: air search radar; radars; radio detection and ranging; centimetric radar; radar communication; radar system; radar station; radar homing and warning; microwa...
+  Pred: Radar
+[triviaqa] #556 | EM=YES | F1=1.00 | Contain=YES | running EM=366/556 (65.83%) | running F1=0.74
+  Q: What author observed, "Any sufficiently advanced technology is indistinguishable from magic"?
+  GT: arthur c clark; arthur c clarke challenge trophy inter school astronomy quiz competition; arthur c clarke; ac clarke; arthur clarke; c clarke; clarke arthur ...
+  Pred: Arthur C. Clarke
+[triviaqa] #557 | EM=YES | F1=1.00 | Contain=YES | running EM=367/557 (65.89%) | running F1=0.74
+  Q: October 7, 1952 saw the birth of what former president, and current prime minister, of Russia?
+  GT: vladimer putin; president putin; владимир путин; vladimir vladimirovich putin; vlad putin; political strongman of russia; puttin; valdimir v putin; vladimir ...
+  Pred: Vladimir Putin
+[triviaqa] #558 | EM=YES | F1=1.00 | Contain=YES | running EM=368/558 (65.95%) | running F1=0.74
+  Q: The gravesite of what American writer, buried in Baltimore, is mysteriously visited every January 19th, to receive a toast of cognac and 3 roses?
+  GT: edger allen poe; henri le rennet; poean; poe edgar allen; edgar alan poe; eddy is no more; edgar allan po; edgar allan poe s tales of mystery and terror; bos...
+  Pred: Edgar Allan Poe
+[triviaqa] #559 | EM=YES | F1=1.00 | Contain=YES | running EM=369/559 (66.01%) | running F1=0.74
+  Q: In what country is Tiahuanaco?
+  GT: boliva; plurinational state of bolivia; bolivia; bolívia; name of bolivia; estado plurinacional de bolivia; bolivia plurinational state of; plan de todos; vo...
+  Pred: Bolivia
+[triviaqa] #560 | EM=YES | F1=1.00 | Contain=YES | running EM=370/560 (66.07%) | running F1=0.74
+  Q: Next Sunday, Sept 19, is International what day?
+  GT: john baur; pirate english language; pirate day; international talk like pirate day itlapd; itlapd; tlapd; international speak like pirate day; international ...
+  Pred: Talk Like A Pirate Day
+[triviaqa] #561 | EM=YES | F1=1.00 | Contain=YES | running EM=371/561 (66.13%) | running F1=0.74
+  Q: What arrow-toting Roman god is now most commonly seen around Valentine's Day?
+  GT: cupid; cupid s arrow; cupid holiday character
+  Pred: Cupid
+[triviaqa] #562 | EM=NO | F1=0.33 | Contain=YES | running EM=371/562 (66.01%) | running F1=0.74
+  Q: Which comedy duo were born Bartholomew and Wiseman?
+  GT: morecambe wise; morcambe and wise; morecambe and wise; morcombe and wise; m w; adventures of morecambe wise; morecambe and wise perform grieg piano concerto;...
+  Pred: Bartholomew and Wiseman
+[triviaqa] #563 | EM=YES | F1=1.00 | Contain=YES | running EM=372/563 (66.07%) | running F1=0.74
+  Q: The term gustatory refers to which of the 5 senses?
+  GT: saltiness; oleogustus; gustatory; gustatory sense; tangy; gustatory sensation; primary tastes; taste; gustaoception; tartness; bitterness taste; tangiest; ta...
+  Pred: taste
+[triviaqa] #564 | EM=YES | F1=1.00 | Contain=YES | running EM=373/564 (66.13%) | running F1=0.74
+  Q: What was the name of the ship that took the Pilgrim Fathers to America?
+  GT: ship mayflower; english colony ship mayflower; mayflower; mayflower ship; may flower
+  Pred: Mayflower
+[triviaqa] #565 | EM=YES | F1=1.00 | Contain=YES | running EM=374/565 (66.19%) | running F1=0.74
+  Q: Which song did Aled Jones forget the words of during a Royal Variety Performance
+  GT: human memory; memory psychology; topographic memory; topographical memory; memry; memorable; memory; memories; memory retention; molecular mechanisms of memo...
+  Pred: Memory
+[triviaqa] #566 | EM=YES | F1=1.00 | Contain=YES | running EM=375/566 (66.25%) | running F1=0.74
+  Q: What long running public radio program, and short lived TV series, debuted in 1995 as Your Radio Playhouse?
+  GT: this american life; that american life; your radio playhouse
+  Pred: This American Life
+[triviaqa] #567 | EM=YES | F1=1.00 | Contain=YES | running EM=376/567 (66.31%) | running F1=0.74
+  Q: In which form of pool (pocket billiards) are the balls formed into a diamond pattern?
+  GT: nine ball; 9 ball pool; 9 ball; nineball; 9ball; six ball
+  Pred: Nine-ball
+[triviaqa] #568 | EM=YES | F1=1.00 | Contain=YES | running EM=377/568 (66.37%) | running F1=0.75
+  Q: In the car insurance business what do the letters TPFT suggest
+  GT: third party fire and theft
+  Pred: Third Party, Fire, and Theft
+[triviaqa] #569 | EM=YES | F1=1.00 | Contain=YES | running EM=378/569 (66.43%) | running F1=0.75
+  Q: Known as The Hoosier State, what was the 19th state to join the Union on december 11, 1816?
+  GT: 19th state; indiana state; education in indiana; transportation in indiana; state of indiana; religion in indiana; indiana usa; hoosier state; indiana; clima...
+  Pred: Indiana
+[triviaqa] #570 | EM=YES | F1=1.00 | Contain=YES | running EM=379/570 (66.49%) | running F1=0.75
+  Q: Oct 5, 1902 saw the birth of Ray Kroc, who started which ubiquitous food source, the most successful fast food operation in the world?
+  GT: mcdonalds com; mchappy day; mckinley mac; der schotte; mcdonald s; mcd s; mcdonald s restaraunt; mcdonalds corporation; micky ds; mcdonald s hamburgers; mddo...
+  Pred: McDonald's
+[triviaqa] #571 | EM=YES | F1=1.00 | Contain=YES | running EM=380/571 (66.55%) | running F1=0.75
+  Q: What Arizona national park was formed over millions of years by the relentless efforts of the Colorado River?
+  GT: north rim; great canyon; grand canyon park act of 1919; ongtupqa; grand canyon of colorado river; south rim; north rim of grand canyon; grand canynon; great ...
+  Pred: Grand Canyon
+[triviaqa] #572 | EM=YES | F1=1.00 | Contain=YES | running EM=381/572 (66.61%) | running F1=0.75
+  Q: In what year did Elvis Presley and his parents move from Tupelo to Memphis?
+  GT: one thousand nine hundred and forty eight; 1948
+  Pred: 1948
+[triviaqa] #573 | EM=NO | F1=0.00 | Contain=YES | running EM=381/573 (66.49%) | running F1=0.75
+  Q: On what apparatus would a male gymnast traditionally perform moves such as scissors, moores, spindels and flairs?
+  GT: pommel horse; pomel horse; gymnastics pommel horse; pommel horse gymnastics; side horse
+  Pred: Still Rings
+[triviaqa] #574 | EM=YES | F1=1.00 | Contain=YES | running EM=382/574 (66.55%) | running F1=0.75
+  Q: What is the official color of the UPS trucks?
+  GT: orangeishblack; orangeish black; brownest; blackish oranges; brownly; orangish blacks; orangish black; brown; black orange; blackishoranges; brown color; ora...
+  Pred: Pullman Brown
+[triviaqa] #575 | EM=NO | F1=0.44 | Contain=YES | running EM=382/575 (66.43%) | running F1=0.75
+  Q: Where is the only place in the United States that has a royal palace?
+  GT: honululu; honululu hawaii; honolulu ccd; honolulu hawai i; pacific honolulu; honolulu hawaii united states; city of honolulu; history of honolulu; honolulu u...
+  Pred: Iolani Palace in O'ahu, Hawaii (Honolulu)
+[triviaqa] #576 | EM=YES | F1=1.00 | Contain=YES | running EM=383/576 (66.49%) | running F1=0.75
+  Q: In a petrol engine what component mixes fuel and air?
+  GT: carburetters; carbureted; carburators; carbereuter; carburetter; carburettor; carburation; carburetors; fuel vapors; mixture control; carburated; diaphragm c...
+  Pred: carburetor
+[triviaqa] #577 | EM=NO | F1=0.06 | Contain=YES | running EM=383/577 (66.38%) | running F1=0.74
+  Q: In British Wrestling who was Shirley Crabtree?
+  GT: big daddy disambiguation; big daddy movie; big daddy; bigdaddy; big daddy film
+  Pred: No Match
+[triviaqa] #578 | EM=YES | F1=1.00 | Contain=YES | running EM=384/578 (66.44%) | running F1=0.75
+  Q: The ancient city of Troy is located in what modern country?
+  GT: turkey; tuerkiye; türkiye respublikası; republic of turkiye; tuerkei; etymology of turkey; türkiye; turkiye; tuerkiye cumhuriyeti; türkiye cumhuriyeti; repub...
+  Pred: Turkey
+[triviaqa] #579 | EM=NO | F1=0.67 | Contain=YES | running EM=384/579 (66.32%) | running F1=0.75
+  Q: Genghis Khan led what group of people?
+  GT: southern mongol; ta ta mongols; монголчууд; people of mongolia; mongol peoples; mongolian people; mongol people; mongols; mongol nation; mongolids; history o...
+  Pred: Mongol empire
+[triviaqa] #580 | EM=NO | F1=0.00 | Contain=YES | running EM=384/580 (66.21%) | running F1=0.74
+  Q: What is the correct term for a 'shooting star'?
+  GT: meteoroid
+  Pred: meteor
+[triviaqa] #581 | EM=YES | F1=1.00 | Contain=YES | running EM=385/581 (66.27%) | running F1=0.74
+  Q: Tuesday marks the birthday of lat night tv host David Letterman. What broadcast channel hosts his show?
+  GT: cbs eye logo; judith sprieser; cbs tv; cbs broadcasting; columbia broadcasting company; cbs television you can feel; great moments; cbs com; cbs; cbs eye; ey...
+  Pred: CBS
+[triviaqa] #582 | EM=YES | F1=1.00 | Contain=YES | running EM=386/582 (66.32%) | running F1=0.74
+  Q: Prior to carving Mount Rushmore, Gutzon Borglum started work on what Georgia monument, the largest bas relief structure in the world, featuring 3 Civil War l...
+  GT: stone mountain park archery center; confederate memorial carving; stone mountain park; stone mountain memorial; stone mountain; stone mountain park velodrome
+  Pred: Stone Mountain
+[triviaqa] #583 | EM=YES | F1=1.00 | Contain=YES | running EM=387/583 (66.38%) | running F1=0.75
+  Q: What 1945 film won best picture, actor, director Oscars?
+  GT: lost weekend disambiguation; lost weekend
+  Pred: The Lost Weekend
+[triviaqa] #584 | EM=YES | F1=1.00 | Contain=YES | running EM=388/584 (66.44%) | running F1=0.75
+  Q: On July 4,1817, construction began on what canal, linking the Great Lakes to the Hudson River, and ultimately, the Atlantic ocean?
+  GT: lock 10 erie canal; erie canal; lock 32 erie canal; lock 3 erie canal; clinton s ditch; eerie canal; lock 4 erie canal; lock 2 erie canal; lock 11 erie canal...
+  Pred: Erie Canal
+[triviaqa] #585 | EM=YES | F1=1.00 | Contain=YES | running EM=389/585 (66.50%) | running F1=0.75
+  Q: NASA celebrated another anniversary today. In what year was it founded?
+  GT: 1958; one thousand nine hundred and fifty eight
+  Pred: 1958
+[triviaqa] #586 | EM=YES | F1=1.00 | Contain=YES | running EM=390/586 (66.55%) | running F1=0.75
+  Q: On what river is the city of Norwich
+  GT: wensum; novi sad friendship bridge; river wensome; river wensum
+  Pred: River Wensum
+[triviaqa] #587 | EM=NO | F1=0.00 | Contain=YES | running EM=390/587 (66.44%) | running F1=0.75
+  Q: Which city in Georgia was burned by General Sherman during the American Civil War
+  GT: city of atlanta; atlanta ga; atlanta united states; atlanta; atlanta georgia; city of atlanta ga; georgia state capital; marthasville ga; culture of atlanta;...
+  Pred: Milledgeville
+[triviaqa] #588 | EM=NO | F1=0.08 | Contain=YES | running EM=390/588 (66.33%) | running F1=0.74
+  Q: Who's missing: Inky, Pinky, and Sue
+  GT: blinky; blinky disambiguation
+  Pred: No Match
+[triviaqa] #589 | EM=YES | F1=1.00 | Contain=YES | running EM=391/589 (66.38%) | running F1=0.74
+  Q: In which Beatles song released in 1966 would you find Father McKenzie darning his socks?
+  GT: eleanor rigby song; eleanor rigby; elenor rigby; all lonely people; eleanor rigby person
+  Pred: Eleanor Rigby
+[triviaqa] #590 | EM=YES | F1=1.00 | Contain=YES | running EM=392/590 (66.44%) | running F1=0.75
+  Q: On which game show was Bobby Charlton once a contestant and winner
+  GT: double your money
+  Pred: Double Your Money
+[triviaqa] #591 | EM=YES | F1=1.00 | Contain=YES | running EM=393/591 (66.50%) | running F1=0.75
+  Q: Which radio broadcaster was known as the Man In Black
+  GT: valentine dyall
+  Pred: Valentine Dyall

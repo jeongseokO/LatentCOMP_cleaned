@@ -1,3 +1,0 @@
-`torch_dtype` is deprecated! Use `dtype` instead!
-Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files:  25%|██▌       | 1/4 [00:55<02:45, 55.02s/it]Fetching 4 files: 100%|██████████| 4/4 [00:55<00:00, 13.76s/it]
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 376.72it/s]

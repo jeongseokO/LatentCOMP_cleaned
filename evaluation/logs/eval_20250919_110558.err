@@ -1,0 +1,52 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 56.62it/s]
+Token indices sequence length is longer than the specified maximum sequence length for this model (146508 > 131072). Running this sequence through the model will result in indexing errors
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/evaluation/evaluate.py", line 353, in <module>
+    main()
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/evaluation/evaluate.py", line 301, in main
+    summary, records, scores = evaluate_dataset(
+                               ^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/evaluation/evaluate.py", line 113, in evaluate_dataset
+    prediction = runner.generate(system_prompt, doc, question, **gen_kwargs)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/evaluation/tri_infer.py", line 212, in generate
+    su_gen = self.tokens_from_messages(msgs, add_generation_prompt=True)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/lopa_llama_modeling.py", line 681, in _tri_build_caches_api
+    return core.tri_build_caches(system_ids=system_ids, user_ids=user_ids, lower_k=lower_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/lopa_llama_modeling.py", line 567, in tri_build_caches
+    out = self.tri_prefill_user_lower(user_ids, lower_k=lower_k, past_key_values=pkv)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/lopa_llama_modeling.py", line 542, in tri_prefill_user_lower
+    hidden_states = decoder_layer(
+                    ^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/transformers/modeling_layers.py", line 94, in __call__
+    return super().__call__(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/lopa_llama_modeling.py", line 272, in forward
+    hidden_states = self.mlp(hidden_states)
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/lopa_llama_modeling.py", line 128, in forward
+    return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 3.91 GiB. GPU 0 has a total capacity of 47.53 GiB of which 1.19 GiB is free. Including non-PyTorch memory, this process has 46.33 GiB memory in use. Of the allocated memory 35.16 GiB is allocated by PyTorch, and 10.86 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+srun: error: n01: task 0: Exited with exit code 1

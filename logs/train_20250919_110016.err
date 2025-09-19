@@ -1,0 +1,110 @@
+W0919 11:00:19.053000 3715192 site-packages/torch/distributed/run.py:793] 
+W0919 11:00:19.053000 3715192 site-packages/torch/distributed/run.py:793] *****************************************
+W0919 11:00:19.053000 3715192 site-packages/torch/distributed/run.py:793] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0919 11:00:19.053000 3715192 site-packages/torch/distributed/run.py:793] *****************************************
+usage: Unified LatentCOMP trainer [-h] [--model_name MODEL_NAME] --data_file
+                                  DATA_FILE --train_method
+                                  {lcomp,lopa,combined} [--epochs EPOCHS]
+                                  [--batch_size BATCH_SIZE] [--lr LR]
+                                  [--seed SEED]
+                                  [--prefill_layers PREFILL_LAYERS]
+                                  [--special_tokens SPECIAL_TOKENS]
+                                  [--num_specials NUM_SPECIALS]
+                                  [--special_add_to {none,user,assistant}]
+                                  [--max_doc_tokens MAX_DOC_TOKENS]
+                                  [--explode] [--no_explode]
+                                  [--group_by_question]
+                                  [--no_group_by_question]
+                                  [--include_query INCLUDE_QUERY]
+                                  [--include_specials INCLUDE_SPECIALS]
+                                  [--use_lora] [--also_cut_gen]
+                                  [--dist_mode {ddp,fsdp,deepspeed}]
+                                  [--zero_stage ZERO_STAGE]
+                                  [--dtype {auto,bf16,fp16,fp32}] [--no_tf32]
+                                  [--sdpa_math_only]
+                                  [--warmup_steps WARMUP_STEPS]
+                                  [--warmup_ratio WARMUP_RATIO]
+                                  [--grad_clip GRAD_CLIP]
+                                  [--wandb_project WANDB_PROJECT]
+                                  [--wandb_run_name WANDB_RUN_NAME]
+                                  [--push_to_hub] [--private_repo]
+                                  [--hf_repo_org HF_REPO_ORG]
+                                  [--hf_repo_id HF_REPO_ID]
+                                  [--cache_dir_model CACHE_DIR_MODEL]
+                                  [--cache_dir_tokenizer CACHE_DIR_TOKENIZER]
+                                  [--out_root OUT_ROOT]
+                                  [--save_best_dir SAVE_BEST_DIR]
+Unified LatentCOMP trainer: error: unrecognized arguments: --no_responses_sequential
+usage: Unified LatentCOMP trainer [-h] [--model_name MODEL_NAME] --data_file
+                                  DATA_FILE --train_method
+                                  {lcomp,lopa,combined} [--epochs EPOCHS]
+                                  [--batch_size BATCH_SIZE] [--lr LR]
+                                  [--seed SEED]
+                                  [--prefill_layers PREFILL_LAYERS]
+                                  [--special_tokens SPECIAL_TOKENS]
+                                  [--num_specials NUM_SPECIALS]
+                                  [--special_add_to {none,user,assistant}]
+                                  [--max_doc_tokens MAX_DOC_TOKENS]
+                                  [--explode] [--no_explode]
+                                  [--group_by_question]
+                                  [--no_group_by_question]
+                                  [--include_query INCLUDE_QUERY]
+                                  [--include_specials INCLUDE_SPECIALS]
+                                  [--use_lora] [--also_cut_gen]
+                                  [--dist_mode {ddp,fsdp,deepspeed}]
+                                  [--zero_stage ZERO_STAGE]
+                                  [--dtype {auto,bf16,fp16,fp32}] [--no_tf32]
+                                  [--sdpa_math_only]
+                                  [--warmup_steps WARMUP_STEPS]
+                                  [--warmup_ratio WARMUP_RATIO]
+                                  [--grad_clip GRAD_CLIP]
+                                  [--wandb_project WANDB_PROJECT]
+                                  [--wandb_run_name WANDB_RUN_NAME]
+                                  [--push_to_hub] [--private_repo]
+                                  [--hf_repo_org HF_REPO_ORG]
+                                  [--hf_repo_id HF_REPO_ID]
+                                  [--cache_dir_model CACHE_DIR_MODEL]
+                                  [--cache_dir_tokenizer CACHE_DIR_TOKENIZER]
+                                  [--out_root OUT_ROOT]
+                                  [--save_best_dir SAVE_BEST_DIR]
+Unified LatentCOMP trainer: error: unrecognized arguments: --no_responses_sequential
+E0919 11:00:19.481000 3715192 site-packages/torch/distributed/elastic/multiprocessing/api.py:869] failed (exitcode: 2) local_rank: 0 (pid: 3715258) of binary: /data2/jeongseokoh/miniconda3/envs/vllm/bin/python
+Traceback (most recent call last):
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/bin/torchrun", line 33, in <module>
+    sys.exit(load_entry_point('torch==2.5.1', 'console_scripts', 'torchrun')())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/distributed/run.py", line 919, in main
+    run(args)
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/distributed/run.py", line 910, in run
+    elastic_launch(
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 138, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 269, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/train.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2025-09-19_11:00:19
+  host      : n01
+  rank      : 1 (local_rank: 1)
+  exitcode  : 2 (pid: 3715259)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-09-19_11:00:19
+  host      : n01
+  rank      : 0 (local_rank: 0)
+  exitcode  : 2 (pid: 3715258)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+srun: error: n01: task 0: Exited with exit code 1

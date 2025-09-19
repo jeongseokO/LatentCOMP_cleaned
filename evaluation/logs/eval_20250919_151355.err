@@ -1,0 +1,80 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files:  75%|███████▌  | 3/4 [03:24<01:08, 68.27s/it]Fetching 4 files: 100%|██████████| 4/4 [03:24<00:00, 51.20s/it]
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:02,  1.15it/s]Loading checkpoint shards:  50%|█████     | 2/4 [00:01<00:01,  1.10it/s]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:02<00:00,  1.11it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:02<00:00,  1.65it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:02<00:00,  1.40it/s]
+Token indices sequence length is longer than the specified maximum sequence length for this model (146512 > 131072). Running this sequence through the model will result in indexing errors
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/evaluation/evaluate.py", line 353, in <module>
+    payload = {
+^^^^^^
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/evaluation/evaluate.py", line 301, in main
+    model_output_dir = None
+                           
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/evaluation/evaluate.py", line 113, in evaluate_dataset
+    
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/evaluation/tri_infer.py", line 206, in generate
+    return self._generate_vanilla(system, document, question, **gen_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/jeongseokoh/LatentCOMP_cleaned/evaluation/tri_infer.py", line 249, in _generate_vanilla
+    generation = self.model.generate(
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/transformers/generation/utils.py", line 2539, in generate
+    result = self._sample(
+             ^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/transformers/generation/utils.py", line 2867, in _sample
+    outputs = self(**model_inputs, return_dict=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/transformers/utils/generic.py", line 940, in wrapper
+    output = func(self, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 459, in forward
+    outputs: BaseModelOutputWithPast = self.model(
+                                       ^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/transformers/utils/generic.py", line 1064, in wrapper
+    outputs = func(self, *args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 395, in forward
+    hidden_states = decoder_layer(
+                    ^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/transformers/modeling_layers.py", line 94, in __call__
+    return super().__call__(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 309, in forward
+    hidden_states = self.mlp(hidden_states)
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data2/jeongseokoh/miniconda3/envs/vllm/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 155, in forward
+    down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 3.91 GiB. GPU 0 has a total capacity of 47.53 GiB of which 1.20 GiB is free. Including non-PyTorch memory, this process has 46.32 GiB memory in use. Of the allocated memory 36.84 GiB is allocated by PyTorch, and 9.17 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+srun: error: n01: task 0: Exited with exit code 1
